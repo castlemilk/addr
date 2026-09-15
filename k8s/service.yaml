@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: addr-geoserver
+  labels:
+    app.kubernetes.io/name: addr-geoserver
+    app.kubernetes.io/part-of: addr-platform
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
+      appProtocol: kubernetes.io/h2c
+    - name: grpc
+      port: 8080
+      targetPort: http
+      protocol: TCP
+      appProtocol: kubernetes.io/h2c
+  selector:
+    app.kubernetes.io/name: addr-geoserver
+---
+# Optional Vultr Managed LoadBalancer for direct edge exposure
+apiVersion: v1
+kind: Service
+metadata:
+  name: addr-geoserver-lb
+  labels:
+    app.kubernetes.io/name: addr-geoserver
+    app.kubernetes.io/part-of: addr-platform
+  annotations:
+    service.beta.kubernetes.io/vultr-loadbalancer-protocol: "tcp"
+    service.beta.kubernetes.io/vultr-loadbalancer-proxy-protocol: "false"
+spec:
+  type: LoadBalancer
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: addr-geoserver

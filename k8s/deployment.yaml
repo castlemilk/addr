@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: addr-geoserver
+  labels:
+    app.kubernetes.io/name: addr-geoserver
+    app.kubernetes.io/part-of: addr-platform
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: addr-geoserver
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: addr-geoserver
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+      containers:
+        - name: geoserver
+          image: ghcr.io/benebsworth/addr-geoserver:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: PORT
+              value: "8080"
+            - name: DB_PATH
+              value: "/data/australia_geo.db"
+            - name: TILES_PATH
+              value: "/data/australia_tiles.mbtiles"
+            - name: TILE_CACHE_MB
+              value: "512"
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 2000m
+              memory: 1536Mi
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 2
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: data-volume
+              mountPath: /data
+            - name: tmp-volume
+              mountPath: /tmp
+      volumes:
+        - name: data-volume
+          persistentVolumeClaim:
+            claimName: addr-data-pvc
+        - name: tmp-volume
+          emptyDir: {}

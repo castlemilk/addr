@@ -1,0 +1,128 @@
+syntax = "proto3";
+
+package geo.v1;
+
+option go_package = "github.com/benebsworth/addr/gen/go/geo/v1;geov1";
+
+service GeoService {
+  // ReverseGeocode resolves a GPS coordinate (latitude, longitude) to the nearest POI and/or G-NAF cadastral address.
+  rpc ReverseGeocode(ReverseGeocodeRequest) returns (ReverseGeocodeResponse);
+
+  // Search performs a full-text search across indexed POIs and cadastral addresses.
+  rpc Search(SearchRequest) returns (SearchResponse);
+
+  // GetNearby returns POIs and addresses within a specified radius around a coordinate.
+  rpc GetNearby(GetNearbyRequest) returns (GetNearbyResponse);
+
+  // GetStats returns database and index statistics.
+  rpc GetStats(GetStatsRequest) returns (GetStatsResponse);
+}
+
+message Coordinate {
+  double latitude = 1;
+  double longitude = 2;
+}
+
+message Place {
+  int64 id = 1;
+  string uuid = 2;
+  string name = 3;
+  optional string category = 4;
+  optional string brand = 5;
+  optional string address_text = 6;
+  optional string suburb = 7;
+  optional string state = 8;
+  optional string postcode = 9;
+  double latitude = 10;
+  double longitude = 11;
+  optional string phone = 12;
+  optional string website = 13;
+  optional double confidence = 14;
+  optional double distance_meters = 15;
+}
+
+message Address {
+  int64 id = 1;
+  string uuid = 2;
+  optional string unit = 3;
+  optional string number = 4;
+  optional string street = 5;
+  optional string suburb = 6;
+  optional string state = 7;
+  optional string postcode = 8;
+  string full_address = 9;
+  double latitude = 10;
+  double longitude = 11;
+  optional double distance_meters = 12;
+}
+
+message ReverseGeocodeRequest {
+  double latitude = 1;
+  double longitude = 2;
+  optional double max_radius_meters = 3;
+}
+
+message ReverseGeocodeResponse {
+  Coordinate query = 1;
+  string match_type = 2; // "poi_and_address", "poi_only", "address_only", "approximate", "none"
+  optional Place place = 3;
+  optional Address address = 4;
+  string formatted_title = 5;
+  string formatted_subtitle = 6;
+  repeated Place nearby_places = 7;
+  repeated Address nearby_addresses = 8;
+  double execution_time_ms = 9;
+}
+
+message SearchRequest {
+  string query = 1;
+  optional double latitude = 2;
+  optional double longitude = 3;
+  optional int32 limit = 4;
+}
+
+message SearchItem {
+  string type = 1; // "place" or "address"
+  int64 id = 2;
+  string title = 3;
+  string subtitle = 4;
+  optional string category = 5;
+  double latitude = 6;
+  double longitude = 7;
+  optional double distance_meters = 8;
+}
+
+message SearchResponse {
+  repeated SearchItem results = 1;
+}
+
+message GetNearbyRequest {
+  double latitude = 1;
+  double longitude = 2;
+  optional double radius_meters = 3;
+  optional int32 limit = 4;
+}
+
+message GetNearbyResponse {
+  repeated Place places = 1;
+  repeated Address addresses = 2;
+}
+
+message GetStatsRequest {}
+
+message IndexedRegion {
+  int64 id = 1;
+  string name = 2;
+  string bbox = 3;
+  int64 place_count = 4;
+  int64 address_count = 5;
+  string created_at = 6;
+}
+
+message GetStatsResponse {
+  int64 place_count = 1;
+  int64 address_count = 2;
+  repeated IndexedRegion regions = 3;
+  int64 db_size_bytes = 4;
+  string db_size_formatted = 5;
+}

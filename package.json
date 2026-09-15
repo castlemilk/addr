@@ -3,23 +3,34 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "node scripts/copy-maplibre-worker.mjs && next dev",
+    "build": "node scripts/copy-maplibre-worker.mjs && next build",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
+    "@bufbuild/protobuf": "^1.10.0",
+    "@connectrpc/connect": "^1.6.1",
+    "@connectrpc/connect-web": "^1.6.1",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^1.43.0",
+    "maplibre-gl": "^6.9.0",
     "next": "16.3.4",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "three": "^0.186.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/geojson": "^7946.0.16",
+    "@types/leaflet": "^1.9.22",
+    "@types/node": "^22.20.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.186.0",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
+    "puppeteer-core": "^25.10.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   },

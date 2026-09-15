@@ -1,0 +1,257 @@
+version: '3'
+
+dotenv: ['.env']
+
+vars:
+  RUN_DIR: .run
+  SERVER_PORT: '{{.SERVER_PORT | default "8085"}}'
+  WEB_PORT: '{{.WEB_PORT | default "3004"}}'
+  ML_PORT: '{{.ML_PORT | default "8090"}}'
+  DB_PATH: '{{.DB_PATH | default "data/australia_geo.db"}}'
+  TILES_PATH: '{{.TILES_PATH | default "data/australia_tiles.mbtiles"}}'
+  GO_BIN: bin/geoserver
+  VENV: scripts/ml/.venv
+  PYTHON: scripts/ml/.venv/bin/python
+  CLI_ARGS: ''
+  ML_ARGS: ''
+
+tasks:
+  default:
+    desc: List available tasks
+    silent: true
+    cmds:
+      - task --list
+
+  setup:
+    desc: Install all dependencies (Go modules, Node packages, Python venv)
+    cmds:
+      - go mod download
+      - pnpm install
+      - task: setup:ml
+
+  setup:ml:
+    desc: Create the Python venv and install ML pipeline dependencies
+    cmds:
+      - uv venv --python 3.12 {{.VENV}}
+      - uv pip install --python {{.PYTHON}} -r scripts/ml/requirements-dev.txt
+
+  generate:
+    desc: Lint protobufs and regenerate Go + TypeScript clients
+    cmds:
+      - buf lint
+      - buf generate
+
+  build:
+    desc: Build the Go service and the Next.js production bundle
+    cmds:
+      - task: build:server
+      - task: build:web
+
+  build:server:
+    desc: Build the Go microservice binary into bin/geoserver
+    sources:
+      - cmd/**/*.go
+      - internal/**/*.go
+      - gen/**/*.go
+      - go.mod
+      - go.sum
+    generates:
+      - '{{.GO_BIN}}'
+    cmds:
+      - go build -trimpath -o {{.GO_BIN}} ./cmd/server
+
+  build:web:
+    desc: Build the Next.js production bundle
+    sources:
+      - src/**/*
+      - public/**/*
+      - package.json
+      - next.config.ts
+      - tsconfig.json
+      - postcss.config.mjs
+    generates:
+      - .next/BUILD_ID
+    env:
+      NEXT_PUBLIC_GEO_SERVICE_URL: '{{.NEXT_PUBLIC_GEO_SERVICE_URL | default "http://localhost:8085"}}'
+    cmds:
+      - pnpm build
+
+  test:
+    desc: Run the Go, Python, and TypeScript test/check suites
+    cmds:
+      - task: test:go
+      - task: test:ml
+      - task: typecheck
+
+  test:go:
+    desc: Run Go unit and integration tests
+    cmds:
+      - go test ./...
+
+  test:ml:
+    desc: Run the Python ML pipeline and server tests
+    cmds:
+      - '{{.PYTHON}} -m pytest scripts/ml/tests -q'
+
+  typecheck:
+    desc: Typecheck the frontend with tsc
+    cmds:
+      - pnpm exec tsc --noEmit
+
+  verify:ui:
+    desc: Headless Chrome smoke test of the map, roof meshes, and Deep 3D Studio
+    cmds:
+      - node scripts/verify-map.mjs
+
+  lint:
+    desc: Lint Go, TypeScript, and Python sources
+    cmds:
+      - go vet ./...
+      - pnpm lint
+      - '{{.PYTHON}} -m ruff check scripts/ml'
+
+  start:
+    desc: Start ML generator, Go service, and web UI in the background
+    cmds:
+      - task: start:ml
+      - task: start:server
+      - task: start:web
+      - task: status
+
+  start:server:
+    desc: Start the Go microservice in the background
+    deps: [build:server]
+    cmds:
+      - mkdir -p {{.RUN_DIR}}
+      - |
+        if [ -f {{.RUN_DIR}}/server.pid ] && ps -p "$(cat {{.RUN_DIR}}/server.pid)" > /dev/null 2>&1; then
+          echo "Go service already running (pid $(cat {{.RUN_DIR}}/server.pid))"
+        else
+          TILE_GENERATOR_URL="${TILE_GENERATOR_URL:-http://127.0.0.1:{{.ML_PORT}}}" \
+            nohup sh -c 'echo $$ > {{.RUN_DIR}}/server.pid; exec {{.GO_BIN}} -port {{.SERVER_PORT}} -db {{.DB_PATH}} -tiles {{.TILES_PATH}}' \
+            > {{.RUN_DIR}}/server.log 2>&1 &
+          sleep 1
+          echo "started Go service on :{{.SERVER_PORT}} (pid $(cat {{.RUN_DIR}}/server.pid 2>/dev/null || echo '?'))"
+        fi
+
+  start:ml:
+    desc: Start the realtime ML tile generator in the background
+    cmds:
+      - mkdir -p {{.RUN_DIR}}
+      - |
+        if [ ! -x {{.PYTHON}} ]; then
+          echo "Python venv missing at {{.PYTHON}}; run 'task setup:ml'"; exit 1
+        fi
+        if [ -f {{.RUN_DIR}}/ml.pid ] && ps -p "$(cat {{.RUN_DIR}}/ml.pid)" > /dev/null 2>&1; then
+          echo "ML generator already running (pid $(cat {{.RUN_DIR}}/ml.pid))"
+        else
+          nohup sh -c 'echo $$ > {{.RUN_DIR}}/ml.pid; exec {{.PYTHON}} -m scripts.ml.server --port {{.ML_PORT}} --heights {{.ML_ARGS}}' \
+            > {{.RUN_DIR}}/ml.log 2>&1 &
+          sleep 1
+          echo "started ML generator on :{{.ML_PORT}} (pid $(cat {{.RUN_DIR}}/ml.pid 2>/dev/null || echo '?'))"
+        fi
+
+  start:web:
+    desc: Start the production Next.js server in the background
+    deps: [build:web]
+    cmds:
+      - mkdir -p {{.RUN_DIR}}
+      - |
+        if [ -f {{.RUN_DIR}}/web.pid ] && ps -p "$(cat {{.RUN_DIR}}/web.pid)" > /dev/null 2>&1; then
+          echo "web already running (pid $(cat {{.RUN_DIR}}/web.pid))"
+        else
+          nohup sh -c 'echo $$ > {{.RUN_DIR}}/web.pid; exec ./node_modules/.bin/next start -p {{.WEB_PORT}}' \
+            > {{.RUN_DIR}}/web.log 2>&1 &
+          sleep 1
+          echo "started web UI on :{{.WEB_PORT}} (pid $(cat {{.RUN_DIR}}/web.pid 2>/dev/null || echo '?'))"
+        fi
+
+  dev:
+    desc: Start ML generator and Go service in background, Next.js dev server in foreground
+    cmds:
+      - task: start:ml
+      - task: start:server
+      - pnpm exec next dev -p {{.WEB_PORT}}
+
+  stop:
+    desc: Stop all background services started by task start
+    cmds:
+      - |
+        for svc in web ml server; do
+          pidfile={{.RUN_DIR}}/$svc.pid
+          if [ -f "$pidfile" ]; then
+            pid=$(cat "$pidfile")
+            if ps -p "$pid" > /dev/null 2>&1; then
+              sh -c "kill $pid" 2>/dev/null || true
+              echo "stopped $svc (pid $pid)"
+            else
+              echo "$svc was not running"
+            fi
+            rm -f "$pidfile"
+          fi
+        done
+      - pkill -f "next-server" 2>/dev/null || true
+
+  restart:
+    desc: Stop and start all services
+    cmds:
+      - task: stop
+      - task: start
+
+  status:
+    desc: Show background service status and health endpoints
+    silent: true
+    cmds:
+      - |
+        for svc in server ml web; do
+          pidfile={{.RUN_DIR}}/$svc.pid
+          if [ -f "$pidfile" ] && ps -p "$(cat "$pidfile")" > /dev/null 2>&1; then
+            echo "[up]   $svc (pid $(cat "$pidfile"))"
+          else
+            echo "[down] $svc"
+          fi
+        done
+      - 'curl -fsS --max-time 2 http://localhost:{{.SERVER_PORT}}/healthz > /dev/null 2>&1 && echo "[ok]   geo service :{{.SERVER_PORT}}" || echo "[fail] geo service :{{.SERVER_PORT}}"'
+      - 'curl -fsS --max-time 2 http://localhost:{{.ML_PORT}}/healthz > /dev/null 2>&1 && echo "[ok]   ml generator :{{.ML_PORT}}" || echo "[fail] ml generator :{{.ML_PORT}}"'
+      - 'curl -fsS --max-time 2 -o /dev/null http://localhost:{{.WEB_PORT}} 2>/dev/null && echo "[ok]   web ui :{{.WEB_PORT}}" || echo "[fail] web ui :{{.WEB_PORT}}"'
+
+  logs:
+    desc: Tail background service logs
+    cmds:
+      - tail -n 50 -f {{.RUN_DIR}}/*.log
+
+  ml:
+    desc: Run the realtime tile generator in the foreground
+    cmds:
+      - '{{.PYTHON}} -m scripts.ml.server --port {{.ML_PORT}} --heights {{.ML_ARGS}}'
+
+  models:
+    desc: Download ONNX models (CLI_ARGS="--presets hot-buildings --quantized")
+    cmds:
+      - '{{.PYTHON}} -m scripts.ml.fetch_models {{.CLI_ARGS}}'
+
+  tiles:
+    desc: 'Build building tiles, e.g. task tiles -- --bbox 145.308,-37.797,145.320,-37.786 --zooms 16 --heights'
+    cmds:
+      - '{{.PYTHON}} -m scripts.ml.pipeline {{.CLI_ARGS}}'
+
+  addresses:
+    desc: 'Extract per-address roof records, e.g. task addresses -- --bbox 145.308,-37.797,145.320,-37.786'
+    cmds:
+      - '{{.PYTHON}} -m scripts.ml.addresses --tiles {{.TILES_PATH}} --db {{.DB_PATH}} --bbox "{{.BBOX | default "145.308,-37.797,145.320,-37.786"}}" --out public/address-roofs.json --format json {{.CLI_ARGS}}'
+
+  sam3:review:
+    desc: 'Run SAM3 separately and write review previews/GeoJSON, e.g. task sam3:review -- --bbox 145.310669,-37.792422,145.316162,-37.788081 --zooms 16 --limit-tiles 1'
+    cmds:
+      - '{{.PYTHON}} -m scripts.ml.sam3_review --existing {{.TILES_PATH}} {{.CLI_ARGS}}'
+
+  clean:
+    desc: Remove build artifacts and runtime state
+    cmds:
+      - rm -rf {{.RUN_DIR}} bin .next
+
+  clean:ml:
+    desc: Remove the Python venv, ONNX models, imagery cache, and caches
+    cmds:
+      - rm -rf {{.VENV}} scripts/ml/models/*.onnx data/imagery .pytest_cache
+      - find scripts -type d -name __pycache__ -prune -exec rm -rf {} +

@@ -1,0 +1,52 @@
+{
+  "prompts": [
+    "house",
+    "tree"
+  ],
+  "threshold": 0.4,
+  "min_iou": 0.3,
+  "imagery_offset": 3,
+  "tiles": [
+    {
+      "tile": "16/59221/40207",
+      "proposals": 178,
+      "existing": 143,
+      "replace": 10,
+      "extra": 167,
+      "missed": 86,
+      "elapsed_s": 11.9
+    },
+    {
+      "tile": "16/59221/40208",
+      "proposals": 160,
+      "existing": 178,
+      "replace": 6,
+      "extra": 152,
+      "missed": 113,
+      "elapsed_s": 11.1
+    }
+  ],
+  "by_prompt": {
+    "house": {
+      "proposals": 177,
+      "replace": 11,
+      "extra": 165,
+      "weak": 1,
+      "mean_best_iou": 0.077
+    },
+    "tree": {
+      "proposals": 161,
+      "replace": 5,
+      "extra": 154,
+      "weak": 2,
+      "mean_best_iou": 0.066
+    }
+  },
+  "totals": {
+    "replace": 16,
+    "extra": 319,
+    "missed": 199,
+    "proposals": 338,
+    "mean_best_iou": 0.072
+  }
+}

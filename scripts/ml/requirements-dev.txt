@@ -1,0 +1,4 @@
+-r requirements.txt
+pytest>=8.0
+mapbox-vector-tile>=2.0
+ruff>=0.6

@@ -1,26 +1,91 @@
 @import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+@import "maplibre-gl/dist/maplibre-gl.css";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #0f172a;
+  --foreground: #f8fafc;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: #090d16;
+  color: #f8fafc;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  overflow-x: hidden;
+}
+
+/* MapLibre GL Controls & Google Maps Look and Feel */
+.maplibregl-ctrl-group {
+  background: #ffffff !important;
+  border-radius: 12px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+  border: 1px solid #e8eaed !important;
+  overflow: hidden;
+}
+
+.maplibregl-ctrl-group button {
+  width: 38px !important;
+  height: 38px !important;
+  transition: background-color 0.15s ease;
+}
+
+.maplibregl-ctrl-group button:hover {
+  background-color: #f1f3f4 !important;
+}
+
+.maplibregl-ctrl-group button + button {
+  border-top: 1px solid #e8eaed !important;
+}
+
+/* Google Maps Info Window / Popup */
+.maplibregl-popup-content {
+  background: #ffffff !important;
+  color: #202124 !important;
+  border-radius: 16px !important;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+  border: 1px solid #dadce0 !important;
+  padding: 12px 14px !important;
+}
+
+.maplibregl-popup-tip {
+  border-top-color: #ffffff !important;
+}
+
+/* Google Pin Drop & Pulse Animation */
+@keyframes googlePinDrop {
+  0% {
+    transform: translateY(-24px) scale(0.9);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(2px) scale(1.05);
+    opacity: 1;
+  }
+  80% {
+    transform: translateY(-2px) scale(0.98);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.google-pin-drop {
+  animation: googlePinDrop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: addr-data-pvc
+  labels:
+    app.kubernetes.io/name: addr-geoserver
+    app.kubernetes.io/part-of: addr-platform
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: vultr-block-storage
+  resources:
+    requests:
+      storage: 50Gi

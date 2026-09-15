@@ -39,3 +39,22 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# python ML pipeline
+scripts/ml/.venv/
+scripts/ml/models/**/*.onnx
+scripts/ml/models/**/*.data
+__pycache__/
+.pytest_cache/
+data/imagery/
+data/previews/
+
+# runtime state
+.run/
+.task/
+
+# generated maplibre worker assets
+public/maplibre/
+
+# generated per-address roof records (task addresses)
+public/address-roofs.json
