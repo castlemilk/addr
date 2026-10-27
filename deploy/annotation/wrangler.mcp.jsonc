@@ -1,31 +1,33 @@
 {
-	"$schema": "./node_modules/wrangler/config-schema.json",
-	"name": "addr-crm-mcp",
-	"main": "src/mcp-worker.ts",
-	"account_id": "2132ccf47ceb5fff234c34d85490470a",
-	"compatibility_date": "2026-10-02",
-	"compatibility_flags": [
-		"global_fetch_strictly_public"
-	],
-	"workers_dev": true,
-	"vars": {
-		"FIELDWORK_EDITOR_ORIGIN": "https://fieldwork-annotations.ben-ebsworth.workers.dev",
-		"FIELDWORK_OWNER_EMAIL": "ben.ebsworth@gmail.com",
-		"ACCESS_AUD": "8ad9f6e476e5fe5131cd5196526da12d3a267a6cee76ac82aec0a627d787dc6a"
-	},
-	"services": [
-		{
-			"binding": "FIELDWORK",
-			"service": "fieldwork-annotations"
-		}
-	],
-	"observability": {
-		"enabled": true
-	},
-	"kv_namespaces": [
-		{
-			"binding": "OAUTH_KV",
-			"id": "c0fba1c624744f2085d14490fcaf5755"
-		}
-	]
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "addr-crm-mcp",
+  "main": "src/mcp-worker.ts",
+  "account_id": "2132ccf47ceb5fff234c34d85490470a",
+  "compatibility_date": "2026-10-02",
+  "compatibility_flags": [
+    "global_fetch_strictly_public"
+  ],
+  "workers_dev": true,
+  "vars": {
+    "FIELDWORK_EDITOR_ORIGIN": "https://fieldwork-annotations.ben-ebsworth.workers.dev",
+    "FIELDWORK_OWNER_EMAIL": "ben.ebsworth@gmail.com",
+    "ACCESS_AUD": "8ad9f6e476e5fe5131cd5196526da12d3a267a6cee76ac82aec0a627d787dc6a",
+    "FIELDWORK_SHARED_WORKSPACES": "true",
+    "FIREBASE_PROJECT_ID": "addr-fieldwork-auth"
+  },
+  "services": [
+    {
+      "binding": "FIELDWORK",
+      "service": "fieldwork-annotations"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  },
+  "kv_namespaces": [
+    {
+      "binding": "OAUTH_KV",
+      "id": "c0fba1c624744f2085d14490fcaf5755"
+    }
+  ]
 }
