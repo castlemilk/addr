@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Addr CRM</title>
+  <!-- CRM_APP_STYLES -->
+</head>
+<body>
+  <main class="workspace" aria-label="Addr CRM workspace">
+    <header class="workspace-header">
+      <div><p class="eyebrow">Hosted workspace</p><h1>Addr CRM</h1></div>
+      <div class="header-actions"><span id="connection" class="text-small text-muted" role="status">Connecting…</span><button id="refresh" type="button" class="btn" disabled>Refresh</button></div>
+    </header>
+    <p id="notice" class="notice" role="alert" hidden></p>
+    <div class="workspace-grid">
+      <aside class="project-pane" aria-label="Projects">
+        <h2>Projects</h2>
+        <form id="project-search" class="search-form">
+          <label for="project-query" class="sr-only">Search project names</label>
+          <input id="project-query" class="form-control" type="search" maxlength="300" placeholder="Search projects" disabled>
+          <button class="btn" type="submit" disabled>Search</button>
+        </form>
+        <p id="project-status" class="text-small text-muted" role="status">Waiting for workspace…</p>
+        <ul id="projects" class="document-list"></ul>
+        <button id="more-projects" class="btn" type="button" hidden>More projects</button>
+      </aside>
+      <section class="item-pane" aria-label="Project items">
+        <div class="section-heading"><div><h2 id="project-title">Choose a project</h2><p id="project-description" class="text-small text-muted">Browse saved items and annotation feedback.</p></div></div>
+        <form id="item-search" class="search-form">
+          <label for="item-query" class="sr-only">Search item titles</label>
+          <input id="item-query" class="form-control" type="search" maxlength="300" placeholder="Search item titles or addresses" disabled>
+          <button class="btn" type="submit" disabled>Search</button>
+        </form>
+        <p id="item-status" class="text-small text-muted" role="status">Select a project to load items.</p>
+        <ul id="items" class="document-list"></ul>
+        <button id="more-items" class="btn" type="button" hidden>More items</button>
+      </section>
+      <section id="detail" class="detail-pane" aria-label="Selected item" aria-live="polite"><div class="empty-state"><h2>Item details</h2><p class="text-muted">Select an item to inspect its saved status, labels and annotations.</p></div></section>
+    </div>
+    <footer class="workspace-footer text-small text-muted">Connected to the hosted CRM. Open the editor to change annotations.</footer>
+  </main>
+  <!-- CRM_APP_SCRIPT -->
+</body>
+</html>

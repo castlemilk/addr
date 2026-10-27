@@ -1,0 +1,55 @@
+// Pinned deploy config: identical to wrangler.jsonc except containers[0].image, which names the image the live
+// AnnotationBackend container already runs (registry digest; no image_build_context), so no Docker image is built.
+// 17 Oct 2026: image 5f388e91 (ListItems tag + summary); previous b3ca27b3 (9 Oct). Running instance confirmed on 9 Oct 2026 12:13 Melbourne (`wrangler containers instances`):
+// version 9, sha256:b3ca27b3… (independent agent review release a8321dde).
+// The application info endpoint may show the prior stable version during the rollout;
+// the running instance reports version 9 and live MCP exposes save_agent_review.
+// Frontend-only deploy: npx wrangler deploy --config wrangler.pinned.jsonc --containers-rollout=none
+// Re-read the running digest before any later deploy, and regenerate from wrangler.jsonc if that file changes.
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "fieldwork-annotations",
+  "main": "src/worker.ts",
+  "account_id": "2132ccf47ceb5fff234c34d85490470a",
+  "compatibility_date": "2026-09-27",
+  "workers_dev": true,
+  "assets": {
+    "directory": "../../apps/annotation-web/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": [
+      "/api/*",
+      "/annotation.v1.AnnotationService/*",
+      "/mcp",
+      "/mcp/*",
+      "/healthz",
+      "/readyz",
+      "/__/auth/*",
+      "/__/firebase/*"
+    ]
+  },
+  "vars": {
+    "ANNOTATION_ALLOWED_ORIGINS": "https://fieldwork-annotations.ben-ebsworth.workers.dev",
+    "GOOGLE_OAUTH_CLIENT_ID": "1046530555412-3gs210m74r2bosv5sj3lu111g20sliqs.apps.googleusercontent.com"
+  },
+  "r2_buckets": [
+    { "binding": "ANNOTATION_BLOBS", "bucket_name": "fieldwork-private-assets" }
+  ],
+  "containers": [
+    {
+      "class_name": "AnnotationBackend",
+      "image": "registry.cloudflare.com/2132ccf47ceb5fff234c34d85490470a/fieldwork-annotations-annotationbackend@sha256:5f388e91d8774a4d56237f3e251ad5f398cef9c14a221e9af023d89fc9e72482",
+      "instance_type": "lite",
+      "max_instances": 1
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      { "name": "ANNOTATION_BACKEND", "class_name": "AnnotationBackend" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["AnnotationBackend"] }
+  ],
+  "observability": { "enabled": true }
+}

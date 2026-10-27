@@ -1,0 +1,79 @@
+.fw-login {
+  color-scheme: light;
+  display: grid;
+  grid-template-columns: minmax(390px, 42%) minmax(0, 1fr);
+  min-height: 100dvh;
+  background: #f7f9fc;
+  color: #122b44;
+  font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
+}
+.fw-login *, .fw-login *::before, .fw-login *::after { box-sizing: border-box; }
+.fw-login p, .fw-login h1 { margin: 0; }
+.fw-login button { font: inherit; cursor: pointer; }
+.fw-login button:disabled { cursor: default; }
+.fw-login button:focus-visible { outline: 3px solid #267c98; outline-offset: 5px; }
+.fw-login-panel { display: flex; flex-direction: column; min-height: 100dvh; padding: 40px clamp(32px, 4.7vw, 80px) 32px; }
+.fw-login-brand { display: flex; align-items: center; gap: 12px; font-size: 27px; font-weight: 650; letter-spacing: -1px; margin-left: -8px; }
+.fw-login-content { width: 100%; max-width: 420px; margin: auto 0; padding: 72px 0; }
+.fw-login-emblem { color: #7f9ab6; margin-bottom: 26px; }
+.fw-login h1 { font-size: clamp(29px, 2.7vw, 42px); line-height: 1.18; font-weight: 600; letter-spacing: -1.5px; margin-bottom: 20px; }
+.fw-login-intro { color: #526980; font-size: clamp(16px, 1.38vw, 20px); line-height: 1.65; letter-spacing: -.25px; margin-bottom: 37px !important; }
+.fw-login-google { display: flex; align-items: center; justify-content: center; gap: 14px; width: 100%; min-height: 56px; border: 1px solid #cad6e3; border-radius: 7px; background: #fff; color: #152b41; font-size: 15px !important; font-weight: 600 !important; padding: 14px 20px; transition: border-color .15s, background .15s, box-shadow .15s; }
+.fw-login-google:hover:not(:disabled) { background: #fff; border-color: #839eb5; box-shadow: 0 3px 10px #17324f09; }
+.fw-login-google:active:not(:disabled) { background: #f0f5fa; }
+.fw-login-google:disabled { color: #718399; background: #f1f5f9; }
+.fw-google-mark { width: 20px; height: 20px; flex-shrink: 0; }
+.fw-login-google-status, .fw-login-google-note { color: #526980; font-size: 13px; line-height: 1.65; margin: 14px 0 0 !important; overflow-wrap: anywhere; }
+.fw-login-google-status { display: flex; align-items: center; gap: 10px; }
+.fw-login-google-label { min-width: 0; overflow-wrap: anywhere; }
+.fw-login-google-reason { padding: 12px 14px; margin: 0 0 14px !important; border-left: 2px solid #8fa6bd; color: #3d556d; background: #f1f5f9; border-radius: 0 4px 4px 0; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.fw-login-google-error { padding: 12px 14px; margin: 14px 0 0 !important; border-left: 2px solid #b44848; color: #8b3535; background: #fff1f1; border-radius: 0 4px 4px 0; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.fw-login-account { color: #526980; font-size: 12px; margin-bottom: 12px !important; overflow-wrap: anywhere; }
+.fw-login-signout { display: block; border: 0; padding: 10px 0 0; background: none; color: #526980; font-size: 13px !important; }
+.fw-login-access { display: flex; align-items: flex-start; gap: 9px; font-size: 12px; color: #6b8199; margin-top: 22px !important; }
+.fw-login-access svg { margin-top: 2px; flex-shrink: 0; }
+.fw-login-settings { display: inline-flex; align-items: center; gap: 8px; border: 0; padding: 8px 0; background: none; color: #526d8d; font-size: 13px !important; margin-top: 52px; }
+.fw-login-settings:hover, .fw-login-signout:hover { color: #123c62; text-decoration: underline; text-underline-offset: 4px; }
+.fw-login-footer { display: flex; flex-direction: column; color: #6b8199; font-size: 11px; line-height: 1.6; }
+.fw-login-footer span:first-child { font-weight: 600; }
+.fw-login-content:has(.fw-email-signin) { padding: 32px 0; }
+.fw-login-content:has(.fw-email-signin) .fw-login-emblem { display: none; }
+.fw-login-content:has(.fw-email-signin) .fw-login-settings { margin-top: 20px; }
+.fw-email-signin { margin-top: 20px; }
+.fw-email-signin .fw-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; font-size: 12px; color: #526980; }
+.fw-email-signin input { width: 100%; min-height: 40px; padding: 8px 12px; border: 1px solid #cad6e3; border-radius: 6px; background: #fff; color: #152b41; }
+.fw-email-signin input:focus-visible { outline: 2px solid #267c98; outline-offset: 2px; }
+.fw-email-signin > p { margin-top: 12px; font-size: 12px; color: #526980; }
+.fw-login-opening { display: flex; align-items: center; justify-content: center; gap: 11px; min-height: 56px; border: 1px solid #dae2ec; border-radius: 7px; color: #526980; font-size: 14px; }
+.fw-login-unavailable p { color: #8b3535; font-size: 13px; line-height: 1.6; margin-bottom: 18px; }
+.fw-login-art { position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 620px; margin: 14px 14px 14px 0; border-radius: 24px; background: #102b46; }
+.fw-login-ascii { display: block; width: 100%; height: calc(100dvh - 84px); max-height: 1080px; min-height: 540px; object-fit: contain; padding: 4px 14px 36px; }
+.fw-login-crosshair { position: absolute; right: 34px; top: 35px; width: 25px; height: 25px; opacity: .5; }
+.fw-login-crosshair::before, .fw-login-crosshair::after { content: ""; background: #adcbde; position: absolute; }
+.fw-login-crosshair::before { top: 12px; width: 25px; height: 1px; }
+.fw-login-crosshair::after { left: 12px; width: 1px; height: 25px; }
+.fw-login-art-footer { position: absolute; left: 34px; right: 25px; bottom: 26px; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.fw-login-art-footer p { color: #a0b6cc; font-size: 12px; }
+.fw-login-motion { display: inline-flex; align-items: center; gap: 7px; padding: 6px 9px; color: #b3c9dd; background: #102b46; border: 1px solid #446079; border-radius: 5px; font-size: 11px !important; }
+.fw-login-motion:hover:not(:disabled) { color: #e2f8fb; border-color: #8ab7c7; }
+.fw-login-motion:disabled { opacity: .65; }
+@media (min-width: 1600px) { .fw-login-panel { padding-left: max(64px, calc((100vw - 1420px) / 2)); } }
+@media (max-width: 1000px) { .fw-login { grid-template-columns: minmax(350px, 46%) minmax(0, 1fr); } .fw-login-panel { padding: 32px; } .fw-login h1 { font-size: 32px; } .fw-login-art-footer { left: 24px; } .fw-login-art-footer p { max-width: 180px; } }
+@media (max-width: 720px) {
+  .fw-login { grid-template-columns: minmax(0, 1fr); }
+  .fw-login-panel { min-height: 600px; min-height: min(100dvh, 800px); padding: 28px 28px 24px; }
+  .fw-login-brand { font-size: 24px; margin-left: 0; }
+  .fw-login-brand svg { width: 27px; }
+  .fw-login-content { max-width: 420px; align-self: center; padding: 54px 0; }
+  .fw-login h1 { font-size: 34px; letter-spacing: -1.25px; }
+  .fw-login-intro { font-size: 17px; }
+  .fw-login-settings { margin-top: 30px; }
+  .fw-login-art { min-height: 420px; margin: 0 14px 14px; border-radius: 18px; }
+  .fw-login-ascii { height: 480px; min-height: 0; padding-bottom: 50px; }
+  .fw-login-art-footer { bottom: 20px; }
+  .fw-login-footer { font-size: 10px; }
+}
+@media (max-width: 380px) { .fw-login-panel { padding: 24px; } .fw-login h1 { font-size: 29px; } .fw-login-break { display: none; } }
+@media (prefers-reduced-motion: reduce) { .fw-login *, .fw-login *::before, .fw-login *::after { animation: none !important; transition: none !important; } }

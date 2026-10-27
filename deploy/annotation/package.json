@@ -1,0 +1,36 @@
+{
+  "name": "fieldwork-deployment",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "types": "wrangler types worker-configuration.d.ts --include-runtime false",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test src/*.test.mjs",
+    "dev": "wrangler dev",
+    "check": "npm run typecheck && wrangler deploy --dry-run",
+    "secrets": "node scripts/secrets.mjs",
+    "migrate": "node scripts/migrate.mjs",
+    "deploy": "wrangler deploy",
+    "types:mcp": "wrangler types worker-mcp-configuration.d.ts --config wrangler.mcp.jsonc --env-interface HostedMcpEnv --include-runtime false",
+    "build:mcp-app": "node ../../apps/mcp-crm/build.mjs",
+    "check:mcp": "npm run build:mcp-app && npm run typecheck && wrangler deploy --config wrangler.mcp.jsonc --dry-run",
+    "deploy:mcp": "npm run build:mcp-app && npm run typecheck && wrangler deploy --config wrangler.mcp.jsonc"
+  },
+  "dependencies": {
+    "@cloudflare/containers": "0.3.7",
+    "@cloudflare/workers-oauth-provider": "1.2.4",
+    "@modelcontextprotocol/ext-apps": "1.7.5",
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "@openai/mcp-extensions": "0.1.0",
+    "jose": "^6.2.12",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20260927.1",
+    "typescript": "5.9.3",
+    "wrangler": "4.141.0"
+  }
+}
