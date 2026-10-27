@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+package annotation.v1;
+
+import "google/protobuf/struct.proto";
+
+option go_package = "github.com/benebsworth/addr/gen/go/annotation/v1;annotationv1";
+
+// AnnotationService manages adapter-independent annotation documents. The JSON
+// contract is described in internal/annotation/README.md. All calls are authenticated.
+// A Struct envelope lets adapters extend source/metadata/properties without a
+// protocol release. Save calls require expectedRevision; conflicts never overwrite.
+service AnnotationService {
+  // The shared JSON adapter envelope is intentional across this service.
+  // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
+  // buf:lint:ignore RPC_REQUEST_STANDARD_NAME
+  // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
+  rpc GetInfo(APIRequest) returns (APIResponse);
+  // The shared JSON adapter envelope is intentional across this service.
+  // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
+  // buf:lint:ignore RPC_REQUEST_STANDARD_NAME
+  // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
+  rpc ListProjects(APIRequest) returns (APIResponse);
+  // The shared JSON adapter envelope is intentional across this service.
+  // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
+  // buf:lint:ignore RPC_REQUEST_STANDARD_NAME
+  // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
+  rpc SaveProject(APIRequest) returns (APIResponse);
+  // The shared JSON adapter envelope is intentional across this service.
+  // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
+  // buf:lint:ignore RPC_REQUEST_STANDARD_NAME
+  // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
+  rpc ListItems(APIRequest) returns (APIResponse);
+  // The shared JSON adapter envelope is intentional across this service.
+  // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
+  // buf:lint:ignore RPC_REQUEST_STANDARD_NAME
+  // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
+  rpc GetItem(APIRequest) returns (APIResponse);
+  // The shared JSON adapter envelope is intentional across this service.
+  // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
+  // buf:lint:ignore RPC_REQUEST_STANDARD_NAME
+  // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
+  rpc SaveItem(APIRequest) returns (APIResponse);
+  // The shared JSON adapter envelope is intentional across this service.
+  // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
+  // buf:lint:ignore RPC_REQUEST_STANDARD_NAME
+  // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
+  rpc DeleteItem(APIRequest) returns (APIResponse);
+  // The shared JSON adapter envelope is intentional across this service.
+  // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
+  // buf:lint:ignore RPC_REQUEST_STANDARD_NAME
+  // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
+  rpc ListLabels(APIRequest) returns (APIResponse);
+  // The shared JSON adapter envelope is intentional across this service.
+  // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
+  // buf:lint:ignore RPC_REQUEST_STANDARD_NAME
+  // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
+  rpc SaveLabel(APIRequest) returns (APIResponse);
+  // The shared JSON adapter envelope is intentional across this service.
+  // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
+  // buf:lint:ignore RPC_REQUEST_STANDARD_NAME
+  // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
+  rpc DeleteLabel(APIRequest) returns (APIResponse);
+  // The shared JSON adapter envelope is intentional across this service.
+  // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
+  // buf:lint:ignore RPC_REQUEST_STANDARD_NAME
+  // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
+  rpc SaveAnnotation(APIRequest) returns (APIResponse);
+  // The shared JSON adapter envelope is intentional across this service.
+  // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
+  // buf:lint:ignore RPC_REQUEST_STANDARD_NAME
+  // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
+  rpc DeleteAnnotation(APIRequest) returns (APIResponse);
+  // The shared JSON adapter envelope is intentional across this service.
+  // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
+  // buf:lint:ignore RPC_REQUEST_STANDARD_NAME
+  // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
+  rpc ListChanges(APIRequest) returns (APIResponse);
+  // The shared JSON adapter envelope is intentional across this service.
+  // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
+  // buf:lint:ignore RPC_REQUEST_STANDARD_NAME
+  // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
+  rpc ExportProject(APIRequest) returns (APIResponse);
+}
+
+message APIRequest { google.protobuf.Struct data = 1; }
+message APIResponse { google.protobuf.Struct data = 1; }

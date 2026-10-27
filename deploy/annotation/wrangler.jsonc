@@ -1,0 +1,48 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "fieldwork-annotations",
+  "main": "src/worker.ts",
+  "account_id": "2132ccf47ceb5fff234c34d85490470a",
+  "compatibility_date": "2026-09-27",
+  "workers_dev": true,
+  "assets": {
+    "directory": "../../apps/annotation-web/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": [
+      "/api/*",
+      "/annotation.v1.AnnotationService/*",
+      "/mcp",
+      "/mcp/*",
+      "/healthz",
+      "/readyz",
+      "/__/auth/*",
+      "/__/firebase/*"
+    ]
+  },
+  "vars": {
+    "ANNOTATION_ALLOWED_ORIGINS": "https://fieldwork-annotations.ben-ebsworth.workers.dev",
+    "GOOGLE_OAUTH_CLIENT_ID": "1046530555412-3gs210m74r2bosv5sj3lu111g20sliqs.apps.googleusercontent.com"
+  },
+  "r2_buckets": [
+    { "binding": "ANNOTATION_BLOBS", "bucket_name": "fieldwork-private-assets" }
+  ],
+  "containers": [
+    {
+      "class_name": "AnnotationBackend",
+      "image": "./Dockerfile",
+      "image_build_context": "../..",
+      "instance_type": "lite",
+      "max_instances": 1
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      { "name": "ANNOTATION_BACKEND", "class_name": "AnnotationBackend" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["AnnotationBackend"] }
+  ],
+  "observability": { "enabled": true }
+}
