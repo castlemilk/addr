@@ -12,6 +12,9 @@ RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
     go build -trimpath -ldflags="-s -w" -o /out/annotation-server ./cmd/annotation-server
 
 FROM gcr.io/distroless/static-debian12:nonroot
+# A new image rollout is required for the existing singleton to receive the
+# shared-workspace startup environment; a Worker-only config deploy is insufficient.
+LABEL dev.fieldwork.runtime-contract="user-workspaces-v1"
 COPY --from=build /out/annotation-server /annotation-server
 ENV ANNOTATION_LISTEN=:8080
 EXPOSE 8080
