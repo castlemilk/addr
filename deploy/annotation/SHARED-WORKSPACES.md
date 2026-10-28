@@ -53,7 +53,7 @@ draft keys remain available only in the original workspace mode.
 5. Configure the gateway's public `FIREBASE_PROJECT_ID` and its Firebase web
    `FIREBASE_API_KEY`. The key is web configuration, not a user/admin credential.
 6. Enable `FIELDWORK_SHARED_WORKSPACES=true` on both editor and gateway only
-   after the deployed backend and new frontend are present. Do not broaden the
+   after the deployed backend and new frontend are present. A running Container keeps its startup environment: activate with a new backend image rollout, then verify the live GetInfo workspace receipt before approving grants. Do not broaden the
    old owner-only Access policy: the new public authorization path is separate.
 7. Use two new ordinary accounts and synthetic records to verify lists/counts,
    known foreign IDs, writes, exports, change feeds and image GET/HEAD/PUT. Verify
