@@ -37,6 +37,9 @@ const worker = {
   async fetch(request:Request, env) {
     const path = new URL(request.url).pathname;
     let forwarded: Request = request;
+    // The browser must load the sign-in shell before it can authenticate.
+    // Keep MCP protocol routes and all data APIs behind the existing checks.
+    if (path === "/mcp/connect" && ["GET", "HEAD"].includes(request.method)) return env.ASSETS.fetch(request);
     if (path === "/api/auth/config" || path === "/api/auth/session") return firebaseAuthRoute(request, env);
     if (isFirebaseHelperPath(path)) return firebaseHelperRoute(request, env);
     if (isBackendPath(path) && path !== "/healthz" && path !== "/readyz") {
