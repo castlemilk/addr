@@ -184,6 +184,10 @@ test("real Worker OAuth, protocol, account isolation and read boundaries", async
     });
     const r = await send(`/oauth/authorize?${query}`);
     jar.absorb(r);
+    if (r.status === 200) {
+      const formPolicy = r.headers.get("Content-Security-Policy").split(";").map(s => s.trim()).find(s => s.startsWith("form-action "));
+      assert.equal(formPolicy, `form-action 'self' ${product} ${new URL(callback).origin}`);
+    }
     return { r, jar, verifier };
   };
   const continueSignin = async (flow) => {

@@ -110,9 +110,12 @@ async function authorization(
     // same-origin is needed for the form POST's real Origin in Chrome.
     headers.set("Referrer-Policy", "same-origin");
     headers.set("Content-Type", "text/html; charset=utf-8");
+    // Chromium also applies form-action to the redirect after a form POST.
+    // Both destinations are configured or already validated by the provider.
+    const formDestinations = [...new Set([env.APPLICATION_ORIGIN, new URL(approved.redirectUri).origin])].join(" ");
     headers.set(
       "Content-Security-Policy",
-      "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+      `default-src 'none'; style-src 'unsafe-inline'; form-action 'self' ${formDestinations}; frame-ancestors 'none'; base-uri 'none'`,
     );
     return new Response(
       formPage(
