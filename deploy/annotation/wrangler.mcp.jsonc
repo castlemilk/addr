@@ -29,5 +29,7 @@
       "binding": "OAUTH_KV",
       "id": "c0fba1c624744f2085d14490fcaf5755"
     }
-  ]
+  ],
+  "durable_objects": { "bindings": [ { "name": "OAUTH_GRANTS", "class_name": "OAuthGrantCoordinator" } ] },
+  "migrations": [ { "tag": "oauth-grants-v1", "new_sqlite_classes": [ "OAuthGrantCoordinator" ] } ]
 }

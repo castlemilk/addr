@@ -6,6 +6,7 @@ import {
 import type { McpEnvironment } from "./mcp-env";
 import type { AccountSession } from "./shared-firebase";
 import { withRequestDiagnostics } from "./request-diagnostics";
+import { GrantCoordinator, grantKV, routeExchange } from "./grant-coordinator";
 
 function unavailable(): Response {
   return Response.json({ message: "The CRM connection is temporarily unavailable." }, {
@@ -45,6 +46,18 @@ const fallback: ExportedHandler<McpEnvironment> = {
 const oauth = createFieldworkOAuth(apiHandler, fallback);
 const sharedOAuth=createFieldworkOAuth(apiHandler,fallback,true);
 
+export class OAuthGrantCoordinator extends GrantCoordinator {
+  constructor(state: DurableObjectState, env: McpEnvironment) {
+    super(state, env, async (request, bindings, context) => {
+      const runtime = bindings as McpEnvironment;
+      if (runtime.FIELDWORK_SHARED_WORKSPACES === "true") {
+        return sharedOAuth.fetch(request, { ...runtime, MCP_ORIGIN: FIELDWORK_ORIGIN, APPLICATION_ORIGIN: runtime.FIELDWORK_EDITOR_ORIGIN }, context);
+      }
+      return oauth.fetch(request, runtime, context);
+    });
+  }
+}
+
 const worker = {
   async fetch(request:Request, env, ctx) {
     const url = new URL(request.url);
@@ -61,11 +74,15 @@ const worker = {
           return await mcp(request, env, ctx);
         }
       }
+      if (env.FIELDWORK_SHARED_WORKSPACES === "true" && (!env.FIREBASE_PROJECT_ID || !env.FIREBASE_API_KEY)) return unavailable();
+      if (!env.OAUTH_GRANTS) return unavailable();
+      const coordinated = await routeExchange(request, env);
+      if (coordinated) return coordinated;
+      const managed = { ...env, OAUTH_KV: grantKV(env) };
       if(env.FIELDWORK_SHARED_WORKSPACES==="true"){
-        if(!env.FIREBASE_PROJECT_ID || !env.FIREBASE_API_KEY)return unavailable();
-        return await sharedOAuth.fetch(request,{...env,MCP_ORIGIN:FIELDWORK_ORIGIN,APPLICATION_ORIGIN:env.FIELDWORK_EDITOR_ORIGIN},ctx);
+        return await sharedOAuth.fetch(request,{...managed,MCP_ORIGIN:FIELDWORK_ORIGIN,APPLICATION_ORIGIN:env.FIELDWORK_EDITOR_ORIGIN},ctx);
       }
-      return await oauth.fetch(request, env, ctx);
+      return await oauth.fetch(request, managed, ctx);
     } catch {
       // Never log credentials, OAuth requests, upstream response bodies or
       // individual record content in gateway errors.
