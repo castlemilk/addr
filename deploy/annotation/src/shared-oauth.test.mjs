@@ -121,6 +121,7 @@ test("real Worker OAuth, protocol, account isolation and read boundaries", async
       compatibilityDate: "2026-10-02",
       compatibilityFlags: ["nodejs_compat", "global_fetch_strictly_public"],
       kvNamespaces: ["OAUTH_KV"],
+      durableObjects: { OAUTH_GRANTS: { className: "OAuthGrantCoordinator", useSQLite: true } },
       bindings: {
         MCP_ORIGIN: origin,
         APPLICATION_ORIGIN: product,
@@ -382,4 +383,12 @@ test("real Worker OAuth, protocol, account isolation and read boundaries", async
       assert.equal((await revoked.json()).error, "invalid_grant");
     },
   );
+  await t.test("overlapping shared-account refreshes return one usable successor", async () => {
+    const { tokens } = await grant("beta");
+    const refresh = credential => send("/oauth/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ grant_type: "refresh_token", refresh_token: credential, client_id: registered.client_id, resource: `${origin}/mcp` }) });
+    const [a, b] = await Promise.all([refresh(tokens.refresh_token), refresh(tokens.refresh_token)]);
+    assert.equal(a.status, 200); assert.equal(b.status, 200);
+    const first = await a.json(), second = await b.json(); assert.equal(first.access_token, second.access_token); assert.equal(first.refresh_token, second.refresh_token);
+    assert.equal((await refresh(first.refresh_token)).status, 200);
+  });
 });

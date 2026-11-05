@@ -70,6 +70,21 @@ Firebase login alone does not remove these records.
 
 ## Verification
 
+The MCP gateway stores each new OAuth grant in the SQLite-backed
+`OAUTH_GRANTS` Durable Object. Grant, access token and encrypted refresh-retry
+response commit together; identical refresh retries within five minutes return
+the same credentials until their successor is used. Reuse of an unexpired
+retired token afterward or after the retry window revokes the connection; an
+unrecognised token cannot revoke it. `OAUTH_KV`
+retains client registration, browser state and a grant-management index. Preserve both bindings and the Durable Object
+namespace across deployments.
+
+Existing MCP connections must reconnect at their next refresh after this
+migration; access tokens remain valid until expiry or revocation. Importing an
+old KV grant could restore a revoked connection. Reverting to a gateway from
+before the migration requires connections created afterward to reconnect too.
+The editor and legacy workspace-token clients use separate authentication.
+
 Run `go test -race ./internal/annotation/...`, the annotation browser session
 tests, `npm run build:annotations`, and `npm test`/`npm run typecheck` in this
 directory. Set `ANNOTATION_TEST_DATABASE_URL` only to a disposable direct
