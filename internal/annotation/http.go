@@ -18,19 +18,30 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/benebsworth/addr/gen/go/annotation/v1/annotationv1connect"
+	"github.com/google/uuid"
 )
 
 const MaxRequestBytes = 4 << 20
 
+type requestIDKey struct{}
+
 type HTTPConfig struct {
-	Token          string
-	Dev            bool
-	AllowedOrigins []string
-	StaticDir      string
-	AssetDir       string
+	Token             string
+	Dev               bool
+	AllowedOrigins    []string
+	StaticDir         string
+	AssetDir          string
+	Workspaces        *Workspaces
+	IdentityBridgeKey string
 }
 
 func NewHTTPHandler(store Store, config HTTPConfig) (http.Handler, error) {
+	if config.Workspaces != nil {
+		if config.Dev || len(config.IdentityBridgeKey) < 32 || config.IdentityBridgeKey == config.Token || config.AssetDir != "" {
+			return nil, errors.New("shared workspaces require a distinct identity bridge key and edge asset storage")
+		}
+		store = workspaceStore{root: config.Workspaces.root}
+	}
 	if !config.Dev && (len(config.Token) < 24 || strings.ContainsAny(config.Token, " \t\r\n")) {
 		return nil, errors.New("ANNOTATION_TOKEN must contain at least 24 non-whitespace characters in cloud mode")
 	}
@@ -110,6 +121,9 @@ func NewHTTPHandler(store Store, config HTTPConfig) (http.Handler, error) {
 		})
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestID := uuid.NewString()
+		w.Header().Set("X-Request-ID", requestID)
+		r = r.WithContext(context.WithValue(r.Context(), requestIDKey{}, requestID))
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
 		w.Header().Set("X-Frame-Options", "DENY")
@@ -152,7 +166,21 @@ func protect(next http.Handler, config HTTPConfig, allowed map[string]bool) http
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
-		if !config.Dev {
+		var workspace Workspace
+		actorName := "workspace"
+		if config.Workspaces != nil && r.Header.Get(IdentityHeader) != "" {
+			identity, err := verifyBridge(r, config.IdentityBridgeKey, time.Now())
+			if err != nil {
+				writeJSON(w, http.StatusUnauthorized, Object{"code": "unauthenticated", "message": "a valid service identity is required"})
+				return
+			}
+			workspace, err = config.Workspaces.resolve(r.Context(), identity)
+			if err != nil {
+				writeJSON(w, http.StatusServiceUnavailable, Object{"code": "unavailable", "message": "Your private workspace could not be opened. Retry shortly."})
+				return
+			}
+			actorName = "user:" + identity.UID
+		} else if !config.Dev {
 			provided := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
 			hash := sha256.Sum256([]byte(provided))
 			if !strings.HasPrefix(r.Header.Get("Authorization"), "Bearer ") || subtle.ConstantTimeCompare(hash[:], expected[:]) != 1 {
@@ -160,13 +188,18 @@ func protect(next http.Handler, config HTTPConfig, allowed map[string]bool) http
 				writeJSON(w, http.StatusUnauthorized, Object{"code": "unauthenticated", "message": "a valid annotation bearer token is required"})
 				return
 			}
+			if config.Workspaces != nil {
+				workspace = config.Workspaces.legacy()
+			}
 		}
-		actorName := "workspace"
 		if config.Dev {
 			actorName = "local-dev"
 		}
 		ctx, cancel := context.WithTimeout(context.WithValue(r.Context(), actorKey{}, actorName), 30*time.Second)
 		defer cancel()
+		if config.Workspaces != nil {
+			ctx = context.WithValue(ctx, workspaceKey{}, workspace)
+		}
 		bodyLimit := int64(MaxRequestBytes)
 		if strings.HasPrefix(r.URL.Path, "/api/v1/assets/") {
 			bodyLimit = MaxAssetBytes

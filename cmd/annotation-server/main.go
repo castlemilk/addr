@@ -94,7 +94,16 @@ func run() error {
 		fmt.Println("Annotation schema version 1 is ready.")
 		return nil
 	}
-	handler, err := annotation.NewHTTPHandler(store, annotation.HTTPConfig{Token: os.Getenv("ANNOTATION_TOKEN"), Dev: *dev, AllowedOrigins: strings.Split(os.Getenv("ANNOTATION_ALLOWED_ORIGINS"), ","), StaticDir: *static, AssetDir: *assets})
+	var workspaces *annotation.Workspaces
+	if os.Getenv("FIELDWORK_SHARED_WORKSPACES") == "true" {
+		workspaceContext, cancelWorkspace := context.WithTimeout(context.Background(), 30*time.Second)
+		workspaces, err = annotation.NewWorkspaces(workspaceContext, store, os.Getenv("FIELDWORK_LEGACY_OWNER_EMAIL"))
+		cancelWorkspace()
+		if err != nil {
+			return errors.New("cannot initialize private workspace registry")
+		}
+	}
+	handler, err := annotation.NewHTTPHandler(store, annotation.HTTPConfig{Workspaces: workspaces, IdentityBridgeKey: os.Getenv("FIELDWORK_IDENTITY_BRIDGE_KEY"), Token: os.Getenv("ANNOTATION_TOKEN"), Dev: *dev, AllowedOrigins: strings.Split(os.Getenv("ANNOTATION_ALLOWED_ORIGINS"), ","), StaticDir: *static, AssetDir: *assets})
 	if err != nil {
 		return err
 	}

@@ -10,11 +10,26 @@ export type FirebaseEnv = {
   FIREBASE_AUTH_DOMAIN_MODE?: string;
   // The OAuth web client ID (public) for quick sign-in with the browser's Google account (Google Identity Services).
   GOOGLE_OAUTH_CLIENT_ID?: string;
+  FIELDWORK_SHARED_WORKSPACES?: string;
+  FIELDWORK_IDENTITY_BRIDGE_KEY?: string;
 };
 type WebConfig = { apiKey: string; authDomain: string; projectId: string; appId: string };
 
 // Google's signing keys, never a URL supplied by the client or token header.
 const googleKeys = createRemoteJWKSet(new URL("https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com"));
+export type ServiceIdentity = { uid:string; email:string; emailVerified:boolean; provider:string };
+const verifiedRequests = new WeakMap<Request,ServiceIdentity>();
+// This is process-local verification state, never a request-selected identity.
+export const verifiedIdentity = (request:Request) => verifiedRequests.get(request);
+
+export async function verifyServiceIdentity(token:string,env:FirebaseEnv,keys:JWTVerifyGetKey=googleKeys):Promise<ServiceIdentity> {
+  const config=firebaseConfig(env);
+  if(!config || token.length>16384)throw new Error("Sign-in is not configured.");
+  const {payload}=await jwtVerify(token,judgedKeys(keys),{issuer:`https://securetoken.google.com/${config.projectId}`,audience:config.projectId,algorithms:["RS256"],requiredClaims:["exp","iat","sub","auth_time"],clockTolerance:30});
+  const now=Math.floor(Date.now()/1000),provider=(payload.firebase as {sign_in_provider?:unknown}|undefined)?.sign_in_provider;
+  if(typeof payload.sub!=="string" || !payload.sub || payload.sub.length>128 || typeof payload.iat!=="number" || payload.iat>now+30 || typeof payload.auth_time!=="number" || payload.auth_time<=0 || payload.auth_time>now+30 || !["google.com","password"].includes(String(provider)) || typeof payload.email!=="string")throw new Error("A normal Fieldwork account is required.");
+  return {uid:payload.sub,email:payload.email,emailVerified:payload.email_verified===true,provider:String(provider)};
+}
 
 /** Google's signing keys could not be loaded (timeout, network, bad answer): the token was not judged at all. */
 export class SigningKeysUnavailable extends Error {}
@@ -68,7 +83,7 @@ export async function verifyGoogleIdentity(token: string, env: FirebaseEnv, keys
 
 const headers = { "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" };
 function denied(status = 401, responseHeaders: HeadersInit = headers) {
-  return Response.json({ code: status === 403 ? "permission_denied" : "unauthenticated", message: "Sign in with an allowed Google account or a valid workspace token." }, { status, headers: responseHeaders });
+  return Response.json({ code: status === 403 ? "permission_denied" : "unauthenticated", message: "Sign in to Fieldwork or use a valid workspace access token." }, { status, headers: responseHeaders });
 }
 // A token that could not be checked is not refused: 503 tells the browser to keep its remembered sign-in and retry later.
 function notChecked(error: unknown, responseHeaders: Headers) {
@@ -112,12 +127,13 @@ export async function firebaseAuthRoute(request: Request, env: FirebaseEnv, keys
     if (config && env.FIREBASE_AUTH_DOMAIN_MODE !== "firebase") config.authDomain = new URL(request.url).host;
     // googleClientId turns on the browser's quick sign-in; Google accepts it only from the client's Authorized JavaScript origins.
     const clientId = googleClientId(env);
-    return Response.json(config && allowedEmails(env).size ? { enabled:true, firebase:config, ...(clientId ? { googleClientId:clientId } : {}) } : { enabled:false }, {headers:cors});
+    const shared=env.FIELDWORK_SHARED_WORKSPACES==="true" && (env.FIELDWORK_IDENTITY_BRIDGE_KEY?.length??0)>=32;
+    return Response.json(config && (shared || allowedEmails(env).size) ? { enabled:true, sharedWorkspaces:shared, firebase:config, ...(clientId ? { googleClientId:clientId } : {}) } : { enabled:false }, {headers:cors});
   }
   try {
     const match = /^Bearer ([^\s]+)$/.exec(request.headers.get("Authorization") || "");
     if (!match) return denied(401,cors);
-    const user = await verifyGoogleIdentity(match[1],env,keys);
+    const user = env.FIELDWORK_SHARED_WORKSPACES==="true" ? await verifyServiceIdentity(match[1],env,keys) : await verifyGoogleIdentity(match[1],env,keys);
     return Response.json({user},{headers:cors});
   } catch (error) {return notChecked(error,cors);}
 }
@@ -134,6 +150,14 @@ export async function authenticateFirebaseRequest(request: Request, env: Firebas
   if (!match) return denied(401,cors);
   if (await workspaceToken(match[1],env.ANNOTATION_TOKEN)) return request;
   try {
+    if(env.FIELDWORK_SHARED_WORKSPACES==="true"){
+      if((env.FIELDWORK_IDENTITY_BRIDGE_KEY?.length??0)<32 || env.FIELDWORK_IDENTITY_BRIDGE_KEY===env.ANNOTATION_TOKEN)return denied(503,cors);
+      const identity=await verifyServiceIdentity(match[1],env,keys);
+      const forwarded=new Request(request);
+      forwarded.headers.delete("X-Fieldwork-Identity");forwarded.headers.delete("Cookie");
+      verifiedRequests.set(forwarded,identity);
+      return forwarded;
+    }
     await verifyGoogleIdentity(match[1],env,keys);
     if (!env.ANNOTATION_TOKEN || env.ANNOTATION_TOKEN.length < 24) return denied(401,cors);
     const forwarded = new Request(request);

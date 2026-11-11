@@ -103,7 +103,7 @@ function parseRange(value: string, size: number): { offset: number; length: numb
 }
 
 /** Private immutable blobs. Annotation documents retain the digest and source provenance. */
-export async function serveAsset(request: Request, env: AssetEnv): Promise<Response> {
+export async function serveAsset(request: Request, env: AssetEnv, verifiedScope?:{workspaceId:string}): Promise<Response> {
   const headers = baseHeaders();
   const url = new URL(request.url);
   const origin = request.headers.get("Origin");
@@ -121,7 +121,8 @@ export async function serveAsset(request: Request, env: AssetEnv): Promise<Respo
     return failure(headers, 503, "unavailable", "Asset storage is not configured.");
   }
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers });
-  if (!(await authenticated(request, env.ANNOTATION_TOKEN))) {
+  if (verifiedScope && verifiedScope.workspaceId!=="legacy" && !/^ws_[a-f0-9]{32}$/.test(verifiedScope.workspaceId)) return failure(headers,503,"unavailable","The private asset workspace could not be resolved.");
+  if (!verifiedScope && !(await authenticated(request, env.ANNOTATION_TOKEN))) {
     headers.set("WWW-Authenticate", 'Bearer realm="annotation"');
     return failure(headers, 401, "unauthenticated", "A valid annotation bearer token is required.");
   }
@@ -135,7 +136,10 @@ export async function serveAsset(request: Request, env: AssetEnv): Promise<Respo
     headers.set("Allow", "GET, HEAD, PUT, OPTIONS");
     return failure(headers, 405, "invalid_argument", "Asset method is not supported.");
   }
-  const key = `sha256/${digest}`;
+  // Scope comes only from the authenticated backend's workspace receipt, never
+  // from URL parameters, headers, document metadata or a supplied digest.
+  const prefix=verifiedScope && verifiedScope.workspaceId!=="legacy" ? `workspaces/${verifiedScope.workspaceId}/` : "";
+  const key = `${prefix}sha256/${digest}`;
   try {
     if (request.method === "PUT") {
       const rawLength = request.headers.get("Content-Length");

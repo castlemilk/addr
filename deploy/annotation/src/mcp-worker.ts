@@ -4,6 +4,9 @@ import {
   type FieldworkOAuthHandler,
 } from "./oauth";
 import type { McpEnvironment } from "./mcp-env";
+import type { AccountSession } from "./shared-firebase";
+import { withRequestDiagnostics } from "./request-diagnostics";
+import { GrantCoordinator, grantKV, routeExchange } from "./grant-coordinator";
 
 function unavailable(): Response {
   return Response.json({ message: "The CRM connection is temporarily unavailable." }, {
@@ -11,17 +14,23 @@ function unavailable(): Response {
   });
 }
 
-async function mcp(request: Request, env: McpEnvironment, ctx: ExecutionContext, scopes?: string[]): Promise<Response> {
+async function mcp(request: Request, env: McpEnvironment, ctx: ExecutionContext, scopes?: string[],session?:AccountSession): Promise<Response> {
   if (!env.ANNOTATION_TOKEN || !env.FIELDWORK) return unavailable();
   return handleFieldworkMcp(request, {
     ANNOTATION_BACKEND: { getByName: () => env.FIELDWORK },
     FIELDWORK_EDITOR_ORIGIN: env.FIELDWORK_EDITOR_ORIGIN,
-  }, ctx, { upstreamAuthorization: `Bearer ${env.ANNOTATION_TOKEN}`, scopes });
+  }, ctx, { upstreamAuthorization: `Bearer ${session?session.idToken:env.ANNOTATION_TOKEN}`, scopes });
 }
 
 const apiHandler: FieldworkOAuthHandler = {
   fetch(request, env, ctx) {
-    return mcp(request, env, ctx, ctx.auth.scope);
+    const props=ctx.props;
+    if(props && "uid" in props){
+      if(env.FIELDWORK_SHARED_WORKSPACES!=="true" || props.uid!==ctx.auth.userId)return unavailable();
+      return mcp(request,env,ctx,ctx.auth.scope,props);
+    }
+    if(props && "workspace" in props && props.workspace==="fieldwork" && props.userId===ctx.auth.userId)return mcp(request, env, ctx, ctx.auth.scope);
+    return unavailable();
   },
 };
 const fallback: ExportedHandler<McpEnvironment> = {
@@ -35,9 +44,22 @@ const fallback: ExportedHandler<McpEnvironment> = {
   },
 };
 const oauth = createFieldworkOAuth(apiHandler, fallback);
+const sharedOAuth=createFieldworkOAuth(apiHandler,fallback,true);
 
-export default {
-  async fetch(request, env, ctx) {
+export class OAuthGrantCoordinator extends GrantCoordinator {
+  constructor(state: DurableObjectState, env: McpEnvironment) {
+    super(state, env, async (request, bindings, context) => {
+      const runtime = bindings as McpEnvironment;
+      if (runtime.FIELDWORK_SHARED_WORKSPACES === "true") {
+        return sharedOAuth.fetch(request, { ...runtime, MCP_ORIGIN: FIELDWORK_ORIGIN, APPLICATION_ORIGIN: runtime.FIELDWORK_EDITOR_ORIGIN }, context);
+      }
+      return oauth.fetch(request, runtime, context);
+    });
+  }
+}
+
+const worker = {
+  async fetch(request:Request, env, ctx) {
     const url = new URL(request.url);
     const origin = request.headers.get("Origin");
     if (origin && origin !== FIELDWORK_ORIGIN && origin !== env.FIELDWORK_EDITOR_ORIGIN) {
@@ -52,7 +74,15 @@ export default {
           return await mcp(request, env, ctx);
         }
       }
-      return await oauth.fetch(request, env, ctx);
+      if (env.FIELDWORK_SHARED_WORKSPACES === "true" && (!env.FIREBASE_PROJECT_ID || !env.FIREBASE_API_KEY)) return unavailable();
+      if (!env.OAUTH_GRANTS) return unavailable();
+      const coordinated = await routeExchange(request, env);
+      if (coordinated) return coordinated;
+      const managed = { ...env, OAUTH_KV: grantKV(env) };
+      if(env.FIELDWORK_SHARED_WORKSPACES==="true"){
+        return await sharedOAuth.fetch(request,{...managed,MCP_ORIGIN:FIELDWORK_ORIGIN,APPLICATION_ORIGIN:env.FIELDWORK_EDITOR_ORIGIN},ctx);
+      }
+      return await oauth.fetch(request, managed, ctx);
     } catch {
       // Never log credentials, OAuth requests, upstream response bodies or
       // individual record content in gateway errors.
@@ -61,3 +91,4 @@ export default {
     }
   },
 } satisfies ExportedHandler<McpEnvironment>;
+export default {fetch(request,env,ctx){return withRequestDiagnostics(request,incoming=>worker.fetch(incoming,env,ctx));}} satisfies ExportedHandler<McpEnvironment>;

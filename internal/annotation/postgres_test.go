@@ -175,4 +175,33 @@ func TestPostgresIntegration(t *testing.T) {
 	if _, err = s.Save(ctx, "item", "image", 0, "verification", raw(t, item)); !errors.Is(err, ErrConflict) {
 		t.Fatalf("Postgres allowed tombstone ID reuse: %v", err)
 	}
+	t.Run("shared workspace HTTP isolation", func(t *testing.T) {
+		t.Cleanup(func() {
+			rows, err := s.db.QueryContext(context.Background(), "SELECT namespace FROM fieldwork_workspaces WHERE namespace<>''")
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			var names []string
+			for rows.Next() {
+				var name string
+				if err = rows.Scan(&name); err != nil {
+					t.Error(err)
+					break
+				}
+				names = append(names, name)
+			}
+			rows.Close()
+			for _, name := range names {
+				if !namespacePattern.MatchString(name) {
+					t.Fatal("invalid test schema")
+				}
+				if _, err = s.db.ExecContext(context.Background(), `DROP SCHEMA "`+name+`" CASCADE`); err != nil {
+					t.Error(err)
+				}
+			}
+		})
+		testSharedWorkspaceHTTPIsolation(t, s)
+	})
+
 }

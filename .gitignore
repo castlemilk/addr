@@ -19,6 +19,8 @@
 
 # production
 /build
+/.wrangler/
+/apps/annotation-web/dist/
 
 # misc
 .DS_Store
@@ -107,3 +109,7 @@ docs/Roofline-extraction-from-orthophotos/
 .claude/settings.local.json
 .claude/.headroom_wrap_settings.lock
 /*.ses
+
+# Local provisioning receipts (not runtime source)
+/deploy/annotation/access-plan.json
+/deploy/annotation/neon-project.json

@@ -52,7 +52,14 @@ async function call<T>(method: Method, data: unknown = {}, connection = client()
   return (result.data?.toJson() ?? {}) as T;
 }
 export const api = {
-  info: () => call<{ adapters: AdapterInfo[]; authRequired: boolean; storage: string }>("getInfo"),
+  info: async () => {
+    const info=await call<{ adapters: AdapterInfo[]; authRequired: boolean; storage: string;workspace?:{id:string;name:string} }>("getInfo");
+    // Only a receipt from the authenticated service selects a draft namespace.
+    const id=info.workspace?.id;
+    if(id==="legacy" || /^ws_[a-f0-9]{32}$/.test(id??""))sessionStorage.setItem("fieldwork.draft.workspace",id!);
+    else sessionStorage.removeItem("fieldwork.draft.workspace");
+    return info;
+  },
   projects: async () => {
     const connection = client();
     const projects: Project[] = []; let cursor = "";

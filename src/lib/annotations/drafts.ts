@@ -4,7 +4,11 @@ export interface LocalDraft { item: Item; baseRevision: number; savedAt: string 
 const prefix = "fieldwork.draft.v1.";
 function draftKey(id: string) {
   const server = localStorage.getItem("fieldwork.api.url") || window.location.origin;
-  return prefix + encodeURIComponent(server.replace(/\/$/, "")) + "." + id;
+  const workspace=typeof sessionStorage!=="undefined"?sessionStorage.getItem("fieldwork.draft.workspace"):null;
+  // Existing private/local installations retain their draft keys. Hosted user
+  // workspaces never read the old unscoped key as a recovery fallback.
+  const scope=workspace && workspace!=="legacy"?encodeURIComponent(workspace)+".":"";
+  return prefix + encodeURIComponent(server.replace(/\/$/, "")) + "." + scope + id;
 }
 export function readDraft(id: string): LocalDraft | null {
   try {

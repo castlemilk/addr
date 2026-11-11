@@ -3,6 +3,7 @@
 import { Layers3, LoaderCircle, LockKeyhole, RefreshCw, Settings2 } from "lucide-react";
 import AsciiNeighbourhood from "./AsciiNeighbourhood";
 import GoogleSignIn from "./GoogleSignIn";
+import EmailSignIn from "./EmailSignIn";
 import "./login.css";
 
 export default function FieldworkLogin({ server, loading, unavailable, onConnected, onSettings, onRetry }: {
@@ -19,8 +20,8 @@ export default function FieldworkLogin({ server, loading, unavailable, onConnect
         <p className="fw-login-intro">Your imagery, models and feedback,<br className="fw-login-break" /> in one workspace.</p>
         {loading ? <div className="fw-login-opening" role="status"><LoaderCircle size={19} className="fw-spin" />Opening your workspace…</div>
           : unavailable ? <div className="fw-login-unavailable"><p role="alert">The workspace could not be reached. Check your connection and try again.</p><button type="button" className="fw-login-google" onClick={onRetry}><RefreshCw size={18} />Retry connection</button></div>
-          : <GoogleSignIn server={server} variant="login" onConnected={onConnected} onSignedOut={onConnected} />}
-        {!loading && !unavailable && <p className="fw-login-access"><LockKeyhole size={14} aria-hidden="true" />Access is limited to invited accounts.</p>}
+          : <><GoogleSignIn server={server} variant="login" onConnected={onConnected} onSignedOut={onConnected} /><EmailSignIn server={server} onConnected={onConnected}/></>}
+        {!loading && !unavailable && <p className="fw-login-access"><LockKeyhole size={14} aria-hidden="true" />Your signed-in account controls workspace access.</p>}
         <button type="button" className="fw-login-settings" onClick={onSettings}><Settings2 size={15} />Connection settings</button>
       </div>
       <footer className="fw-login-footer"><span>Fieldwork</span><span>Image review workspace</span></footer>

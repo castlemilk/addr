@@ -38,12 +38,13 @@ type Store interface {
 
 type ListOptions struct {
 	ProjectID, Cursor, Query, Status, Adapter, Tag string
-	Limit                                     int
+	Limit                                          int
 }
 type SQLStore struct {
-	db       *sql.DB
-	driver   string
-	adapters map[string]Adapter
+	db        *sql.DB
+	driver    string
+	adapters  map[string]Adapter
+	namespace string
 }
 
 type StoreOption func(*SQLStore)
@@ -159,9 +160,9 @@ type queryer interface {
 	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
 }
 
-func getDocument(ctx context.Context, q queryer, kind, id string) (json.RawMessage, error) {
+func (s *SQLStore) getDocument(ctx context.Context, q queryer, kind, id string) (json.RawMessage, error) {
 	var data []byte
-	err := q.QueryRowContext(ctx, "SELECT body FROM annotation_documents WHERE kind=$1 AND id=$2", kind, id).Scan(&data)
+	err := q.QueryRowContext(ctx, s.query("SELECT body FROM annotation_documents WHERE kind=$1 AND id=$2"), kind, id).Scan(&data)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -169,7 +170,7 @@ func getDocument(ctx context.Context, q queryer, kind, id string) (json.RawMessa
 }
 
 func (s *SQLStore) Get(ctx context.Context, kind, id string) (json.RawMessage, error) {
-	return getDocument(ctx, s.db, kind, id)
+	return s.getDocument(ctx, s.db, kind, id)
 }
 
 func boundedLimit(n int) int {
@@ -230,7 +231,7 @@ func (s *SQLStore) list(ctx context.Context, q queryer, kind string, opts ListOp
 	}
 	limit := boundedLimit(opts.Limit)
 	args = append(args, limit+1)
-	rows, err := q.QueryContext(ctx, "SELECT id,body FROM annotation_documents WHERE "+where+fmt.Sprintf(" ORDER BY id LIMIT $%d", len(args)), args...)
+	rows, err := q.QueryContext(ctx, s.query("SELECT id,body FROM annotation_documents WHERE ")+where+fmt.Sprintf(" ORDER BY id LIMIT $%d", len(args)), args...)
 	if err != nil {
 		return nil, "", err
 	}
@@ -265,7 +266,7 @@ func (s *SQLStore) beginWrite(ctx context.Context) (*sql.Tx, int64, error) {
 		return nil, 0, err
 	}
 	var cursor int64
-	err = tx.QueryRowContext(ctx, "UPDATE annotation_clock SET cursor=cursor+1 WHERE id=1 RETURNING cursor").Scan(&cursor)
+	err = tx.QueryRowContext(ctx, s.query("UPDATE annotation_clock SET cursor=cursor+1 WHERE id=1 RETURNING cursor")).Scan(&cursor)
 	if err != nil {
 		tx.Rollback()
 		return nil, 0, err
@@ -288,14 +289,14 @@ func (s *SQLStore) Save(ctx context.Context, kind, id string, expected int64, ac
 		return nil, err
 	}
 	defer tx.Rollback()
-	previous, err := getDocument(ctx, tx, kind, id)
+	previous, err := s.getDocument(ctx, tx, kind, id)
 	var base Base
 	if errors.Is(err, ErrNotFound) {
 		if expected != 0 {
 			return nil, ErrConflict
 		}
 		var deletedRevision int64
-		err = tx.QueryRowContext(ctx, "SELECT revision FROM annotation_tombstones WHERE kind=$1 AND id=$2", kind, id).Scan(&deletedRevision)
+		err = tx.QueryRowContext(ctx, s.query("SELECT revision FROM annotation_tombstones WHERE kind=$1 AND id=$2"), kind, id).Scan(&deletedRevision)
 		if err == nil {
 			return nil, ErrConflict
 		}
@@ -323,7 +324,7 @@ func (s *SQLStore) Save(ctx context.Context, kind, id string, expected int64, ac
 	if err != nil {
 		return nil, err
 	}
-	_, err = tx.ExecContext(ctx, "INSERT INTO annotation_documents (kind,id,project_id,revision,body) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (kind,id) DO UPDATE SET revision=excluded.revision,body=excluded.body", kind, id, project, base.Revision, string(data))
+	_, err = tx.ExecContext(ctx, s.query("INSERT INTO annotation_documents (kind,id,project_id,revision,body) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (kind,id) DO UPDATE SET revision=excluded.revision,body=excluded.body"), kind, id, project, base.Revision, string(data))
 	if err != nil {
 		return nil, err
 	}
@@ -433,7 +434,7 @@ func (s *SQLStore) validateDocument(ctx context.Context, tx *sql.Tx, kind string
 			if _, checked := checkedLabels[a.LabelID]; checked {
 				continue
 			}
-			label, err := getDocument(ctx, tx, "label", a.LabelID)
+			label, err := s.getDocument(ctx, tx, "label", a.LabelID)
 			if errors.Is(err, ErrNotFound) {
 				return nil, "", invalid("annotation label %q does not exist", a.LabelID)
 			}
@@ -455,7 +456,7 @@ func (s *SQLStore) validateDocument(ctx context.Context, tx *sql.Tx, kind string
 		if err := checkID(project); err != nil {
 			return nil, "", err
 		}
-		if _, err := getDocument(ctx, tx, "project", project); errors.Is(err, ErrNotFound) {
+		if _, err := s.getDocument(ctx, tx, "project", project); errors.Is(err, ErrNotFound) {
 			return nil, "", invalid("project does not exist")
 		} else if err != nil {
 			return nil, "", err
@@ -483,7 +484,7 @@ func (s *SQLStore) appendChange(ctx context.Context, tx *sql.Tx, cursor int64, c
 	if err != nil {
 		return err
 	}
-	_, err = tx.ExecContext(ctx, "INSERT INTO annotation_changes (cursor,project_id,body) VALUES ($1,$2,$3)", cursor, change.ProjectID, string(data))
+	_, err = tx.ExecContext(ctx, s.query("INSERT INTO annotation_changes (cursor,project_id,body) VALUES ($1,$2,$3)"), cursor, change.ProjectID, string(data))
 	return err
 }
 
@@ -499,7 +500,7 @@ func (s *SQLStore) Delete(ctx context.Context, kind, id string, expected int64, 
 		return err
 	}
 	defer tx.Rollback()
-	data, err := getDocument(ctx, tx, kind, id)
+	data, err := s.getDocument(ctx, tx, kind, id)
 	if err != nil {
 		return err
 	}
@@ -514,7 +515,7 @@ func (s *SQLStore) Delete(ctx context.Context, kind, id string, expected int64, 
 		return ErrConflict
 	}
 	if kind == "label" {
-		rows, err := tx.QueryContext(ctx, "SELECT body FROM annotation_documents WHERE kind='item' AND project_id=$1", doc.ProjectID)
+		rows, err := tx.QueryContext(ctx, s.query("SELECT body FROM annotation_documents WHERE kind='item' AND project_id=$1"), doc.ProjectID)
 		if err != nil {
 			return err
 		}
@@ -542,10 +543,10 @@ func (s *SQLStore) Delete(ctx context.Context, kind, id string, expected int64, 
 			return err
 		}
 	}
-	if _, err = tx.ExecContext(ctx, "DELETE FROM annotation_documents WHERE kind=$1 AND id=$2", kind, id); err != nil {
+	if _, err = tx.ExecContext(ctx, s.query("DELETE FROM annotation_documents WHERE kind=$1 AND id=$2"), kind, id); err != nil {
 		return err
 	}
-	if _, err = tx.ExecContext(ctx, "INSERT INTO annotation_tombstones (kind,id,revision) VALUES ($1,$2,$3)", kind, id, expected+1); err != nil {
+	if _, err = tx.ExecContext(ctx, s.query("INSERT INTO annotation_tombstones (kind,id,revision) VALUES ($1,$2,$3)"), kind, id, expected+1); err != nil {
 		return err
 	}
 	if err = s.appendChange(ctx, tx, cursor, Change{ProjectID: doc.ProjectID, Kind: kind, ID: id, Operation: "delete", Revision: expected + 1, Actor: actor, Timestamp: time.Now().UTC().Format(time.RFC3339Nano), Document: data}); err != nil {
@@ -572,7 +573,7 @@ func (s *SQLStore) Changes(ctx context.Context, project, cursor string, limit in
 		where += " AND project_id=$2"
 	}
 	args = append(args, limit+1)
-	rows, err := s.db.QueryContext(ctx, "SELECT body FROM annotation_changes WHERE "+where+fmt.Sprintf(" ORDER BY cursor LIMIT $%d", len(args)), args...)
+	rows, err := s.db.QueryContext(ctx, s.query("SELECT body FROM annotation_changes WHERE ")+where+fmt.Sprintf(" ORDER BY cursor LIMIT $%d", len(args)), args...)
 	if err != nil {
 		return page, err
 	}
@@ -611,18 +612,18 @@ func (s *SQLStore) Export(ctx context.Context, project string) (Export, error) {
 	defer tx.Rollback()
 	result := Export{SchemaVersion: 1, Items: []Item{}, Labels: []Label{}}
 	var cursor int64
-	if err = tx.QueryRowContext(ctx, "SELECT cursor FROM annotation_clock WHERE id=1").Scan(&cursor); err != nil {
+	if err = tx.QueryRowContext(ctx, s.query("SELECT cursor FROM annotation_clock WHERE id=1")).Scan(&cursor); err != nil {
 		return result, err
 	}
 	result.Cursor = strconv.FormatInt(cursor, 10)
-	data, err := getDocument(ctx, tx, "project", project)
+	data, err := s.getDocument(ctx, tx, "project", project)
 	if err != nil {
 		return result, err
 	}
 	if err = json.Unmarshal(data, &result.Project); err != nil {
 		return result, err
 	}
-	rows, err := tx.QueryContext(ctx, "SELECT kind,body FROM annotation_documents WHERE project_id=$1 AND kind IN ('item','label') ORDER BY kind,id", project)
+	rows, err := tx.QueryContext(ctx, s.query("SELECT kind,body FROM annotation_documents WHERE project_id=$1 AND kind IN ('item','label') ORDER BY kind,id"), project)
 	if err != nil {
 		return result, err
 	}

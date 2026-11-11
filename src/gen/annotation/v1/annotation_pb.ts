@@ -79,4 +79,3 @@ export class APIResponse extends Message<APIResponse> {
     return proto3.util.equals(APIResponse, a, b);
   }
 }
-

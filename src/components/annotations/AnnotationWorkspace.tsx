@@ -162,7 +162,9 @@ export default function AnnotationWorkspace() {
   const refresh = useCallback(async () => {
     setLoading(true); setProjectsLoaded(false); setError(""); setNotice(""); setRestoring(true);
     try {
-      const [result, info] = await Promise.all([api.projects(), api.info()]);
+      // Resolve the authenticated draft workspace before loading any items.
+      const info=await api.info();
+      const result=await api.projects();
       setProjectsLoaded(true); setAccessRequired(false);
       const list = result.projects ?? [];
       setProjects(list); setAdapters(info.adapters ?? []);

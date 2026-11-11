@@ -2,12 +2,15 @@ import {
   AuthorizationError,
   CimdFetchError,
   OAuthProvider,
+  OAuthError,
   authorizationErrorRedirect,
   type ConsentDescription,
   type OAuthHelpers,
   type OAuthResourceContext,
 } from "@cloudflare/workers-oauth-provider";
 import type { McpEnvironment } from "./mcp-env";
+import { sharedAuthorization,sharedConnection,sharedFailure,renewAccount,type RuntimeEnv } from "./shared-oauth";
+import type { AccountSession } from "./shared-firebase";
 
 export const FIELDWORK_ORIGIN = "https://addr-crm-mcp.ben-ebsworth.workers.dev";
 export const FIELDWORK_RESOURCE = `${FIELDWORK_ORIGIN}/mcp`;
@@ -21,7 +24,7 @@ export interface FieldworkOAuthProps {
 }
 
 export interface FieldworkOAuthHandler {
-  fetch(request: Request, env: McpEnvironment, ctx: OAuthResourceContext<FieldworkOAuthProps>): Response | Promise<Response>;
+  fetch(request: Request, env: McpEnvironment, ctx: OAuthResourceContext<FieldworkOAuthProps|AccountSession>): Response | Promise<Response>;
 }
 
 type AuthorizationEnv = McpEnvironment & {
@@ -220,6 +223,7 @@ async function authorize(request: Request, env: AuthorizationEnv, ctx: Execution
 export function createFieldworkOAuth(
   apiHandler: FieldworkOAuthHandler,
   fallbackHandler: ExportedHandler<McpEnvironment>,
+  shared=false,
 ): OAuthProvider<McpEnvironment> {
   return new OAuthProvider<McpEnvironment>({
     apiRoute: "/mcp",
@@ -227,17 +231,28 @@ export function createFieldworkOAuth(
       fetch(request, env, ctx) {
         // OAuthProvider v1.2 populates auth and props after validating the token;
         // its legacy handler option still declares only ExecutionContext.
-        return apiHandler.fetch(request, env, ctx as OAuthResourceContext<FieldworkOAuthProps>);
+        return apiHandler.fetch(request, env, ctx as OAuthResourceContext<FieldworkOAuthProps|AccountSession>);
       },
     },
     defaultHandler: {
       async fetch(request, env, ctx) {
-        if (new URL(request.url).pathname === "/authorize") return authorize(request, env as AuthorizationEnv, ctx);
+        const path=new URL(request.url).pathname;
+        if (path === "/authorize") return authorize(request, env as AuthorizationEnv, ctx);
+        if(shared){
+          try{
+            if(path==="/oauth/authorize")return await sharedAuthorization(request,env as RuntimeEnv & {OAUTH_PROVIDER:OAuthHelpers});
+            if(path.startsWith("/connect/"))return await sharedConnection(request,env as RuntimeEnv & {OAUTH_PROVIDER:OAuthHelpers});
+          }catch(error){
+            if(error instanceof AuthorizationError || error instanceof CimdFetchError)return sharedFailure(request,env as RuntimeEnv,"This connection expired or belongs to another browser. Restart it from the intended assistant account.");
+            if(error instanceof OAuthError)return sharedFailure(request,env as RuntimeEnv,error.description,error.statusCode);
+            return sharedFailure(request,env as RuntimeEnv,"The service connection could not be completed. Retry shortly.",503);
+          }
+        }
         if (!fallbackHandler.fetch) return localError("Not found.", 404);
         return fallbackHandler.fetch(request, env, ctx);
       },
     },
-    authorizeEndpoint: "/authorize",
+    authorizeEndpoint: shared?"/oauth/authorize":"/authorize",
     tokenEndpoint: "/oauth/token",
     clientRegistrationEndpoint: "/oauth/register",
     scopesSupported: [...FIELDWORK_SCOPES],
@@ -252,6 +267,13 @@ export function createFieldworkOAuth(
     refreshTokenTTL: 30 * 24 * 60 * 60,
     // Dot may refresh while its connection is in use. Dormant grants expire.
     refreshTokenIdleTTL: 30 * 24 * 60 * 60,
+    tokenExchangeCallback:async options=>{
+      const props=options.props as FieldworkOAuthProps|AccountSession|undefined;
+      // Older Access-owner grants continue to use only the original workspace.
+      if(props && "workspace" in props && props.workspace==="fieldwork" && props.userId===options.userId)return {newProps:props};
+      if(!shared || !props || !("uid" in props) || props.uid!==options.userId || typeof props.refreshToken!=="string" || typeof props.idToken!=="string")throw new OAuthError("invalid_grant",{description:"Reconnect Fieldwork using the intended service account."});
+      return {newProps:await renewAccount(props,options.env as RuntimeEnv)};
+    },
     onError: () => undefined,
   });
 }

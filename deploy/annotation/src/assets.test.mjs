@@ -16,7 +16,10 @@ const code = ts.transpileModule(await readFile(new URL("./assets.ts", import.met
 test("private immutable asset storage in the Workers runtime", async (t) => {
   const mf = new Miniflare(convertV4MiniflareOptions({
     modules: true,
-    script: `${code.replace('console.error("Fieldwork asset storage request failed.");', 'console.error("Local fixture asset error:", error instanceof Error ? error.message : "unknown");')}\nexport default { fetch: serveAsset };`,
+    script: `${code.replace('console.error("Fieldwork asset storage request failed.");', 'console.error("Local fixture asset error:", error instanceof Error ? error.message : "unknown");')}\nexport default { fetch(request, env) {
+ const scopes={"Bearer fixture-a":{workspaceId:"ws_"+"a".repeat(32)},"Bearer fixture-b":{workspaceId:"ws_"+"b".repeat(32)}};
+ return serveAsset(request,env,scopes[request.headers.get("Authorization")]);
+ } };`,
     compatibilityDate: "2026-09-25",
     r2Buckets: ["ANNOTATION_BLOBS"],
     bindings: { ANNOTATION_TOKEN: token, ANNOTATION_ALLOWED_ORIGINS: origin },
@@ -173,6 +176,18 @@ test("private immutable asset storage in the Workers runtime", async (t) => {
     assert.equal(response.headers.get("Content-Type"), "application/octet-stream");
     assert.match(response.headers.get("Content-Disposition"), /^attachment;/);
     assert.match(response.headers.get("Content-Security-Policy"), /sandbox/);
+  });
+
+  await t.test("private user assets, existence checks and writes do not cross workspace prefixes", async()=>{
+    const bytes=Buffer.from("private new user asset"),digest=sha256(bytes);
+    const asUser=(identity,options={})=>request(digest,{...options,headers:{Authorization:`Bearer fixture-${identity}`,...options.headers}});
+    assert.equal((await asUser("a",{method:"PUT",body:bytes,headers:{"Content-Length":String(bytes.length)}})).status,201);
+    assert.equal((await asUser("b")).status,404);
+    assert.equal((await asUser("b",{method:"HEAD",headers:{"X-Fieldwork-Workspace":"ws_"+"a".repeat(32)}})).status,404);
+    assert.equal((await request(digest)).status,404);
+    assert.equal((await asUser("b",{method:"PUT",body:bytes,headers:{"Content-Length":String(bytes.length)}})).status,201);
+    assert.deepEqual(Buffer.from(await (await asUser("a")).arrayBuffer()),bytes);
+    assert.deepEqual(Buffer.from(await (await asUser("b")).arrayBuffer()),bytes);
   });
 
   await t.test("rejects oversized files before reading their body", async () => {

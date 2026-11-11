@@ -1,0 +1,65 @@
+name: Fieldwork shared service
+on:
+  pull_request:
+    paths: ['internal/annotation/**', 'cmd/annotation-server/**', 'deploy/annotation/**', 'src/lib/annotations/**', 'src/components/annotations/**', 'apps/annotation-web/**', 'go.mod', 'go.sum', '.github/workflows/fieldwork-shared.yml']
+  push:
+    branches: [main]
+    paths: ['internal/annotation/**', 'cmd/annotation-server/**', 'deploy/annotation/**', 'src/lib/annotations/**', 'src/components/annotations/**', 'apps/annotation-web/**', 'go.mod', 'go.sum', '.github/workflows/fieldwork-shared.yml']
+permissions:
+  contents: read
+jobs:
+  isolation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_PASSWORD: disposable-ci-password
+          POSTGRES_DB: fieldwork_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      ANNOTATION_TEST_DATABASE_URL: postgres://postgres:disposable-ci-password@127.0.0.1:5432/fieldwork_test?sslmode=disable
+      DATABASE_URL: postgres://postgres:disposable-ci-password@127.0.0.1:5432/fieldwork_test?sslmode=disable
+      DATABASE_URL_UNPOOLED: postgres://postgres:disposable-ci-password@127.0.0.1:5432/fieldwork_test?sslmode=disable
+      GOFLAGS: -trimpath
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: npm ci --ignore-scripts
+        working-directory: deploy/annotation
+      - run: go test -race ./internal/annotation/...
+      - run: npm run typecheck
+        working-directory: deploy/annotation
+      - run: node --test src/lib/annotations/api.test.mjs src/lib/annotations/drafts.test.mjs src/lib/annotations/firebase.test.mjs src/lib/annotations/google-identity.test.mjs
+      - run: npm run build:annotations
+      - name: Run real edge, PostgreSQL, private asset and MCP boundary checks
+        env:
+          ANNOTATION_TOKEN: synthetic-legacy-workspace-token-at-least-24
+          FIELDWORK_SHARED_WORKSPACES: 'true'
+          FIELDWORK_IDENTITY_BRIDGE_KEY: synthetic-identity-bridge-key-at-least-32-bytes
+          FIELDWORK_LEGACY_OWNER_EMAIL: owner@example.test
+          ANNOTATION_ALLOWED_ORIGINS: https://fieldwork.example
+          FIELDWORK_TEST_BACKEND_URL: http://127.0.0.1:52375
+        run: |
+          go build -o /tmp/fieldwork-ci ./cmd/annotation-server
+          /tmp/fieldwork-ci --migrate
+          /tmp/fieldwork-ci --listen 127.0.0.1:52375 > /tmp/fieldwork-ci.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:52375/readyz > /dev/null; then break; fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:52375/readyz
+          npm test --prefix deploy/annotation

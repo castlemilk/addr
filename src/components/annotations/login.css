@@ -38,6 +38,14 @@
 .fw-login-settings:hover, .fw-login-signout:hover { color: #123c62; text-decoration: underline; text-underline-offset: 4px; }
 .fw-login-footer { display: flex; flex-direction: column; color: #6b8199; font-size: 11px; line-height: 1.6; }
 .fw-login-footer span:first-child { font-weight: 600; }
+.fw-login-content:has(.fw-email-signin) { padding: 32px 0; }
+.fw-login-content:has(.fw-email-signin) .fw-login-emblem { display: none; }
+.fw-login-content:has(.fw-email-signin) .fw-login-settings { margin-top: 20px; }
+.fw-email-signin { margin-top: 20px; }
+.fw-email-signin .fw-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; font-size: 12px; color: #526980; }
+.fw-email-signin input { width: 100%; min-height: 40px; padding: 8px 12px; border: 1px solid #cad6e3; border-radius: 6px; background: #fff; color: #152b41; }
+.fw-email-signin input:focus-visible { outline: 2px solid #267c98; outline-offset: 2px; }
+.fw-email-signin > p { margin-top: 12px; font-size: 12px; color: #526980; }
 .fw-login-opening { display: flex; align-items: center; justify-content: center; gap: 11px; min-height: 56px; border: 1px solid #dae2ec; border-radius: 7px; color: #526980; font-size: 14px; }
 .fw-login-unavailable p { color: #8b3535; font-size: 13px; line-height: 1.6; margin-bottom: 18px; }
 .fw-login-art { position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 620px; margin: 14px 14px 14px 0; border-radius: 24px; background: #102b46; }

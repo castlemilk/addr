@@ -2,7 +2,7 @@ import type { Auth, User } from "firebase/auth";
 import { googleAutoSignInOff, googleClientId, googleSignedIn, googleSignedOut, googleSignInRefused } from "./google-identity";
 
 // googleClientId: the OAuth web client for quick sign-in with the browser's Google account ("" when not offered).
-type FirebaseConnection = { auth: Auth; sdk: typeof import("firebase/auth"); origin: string; googleClientId: string };
+type FirebaseConnection = { auth: Auth; sdk: typeof import("firebase/auth"); origin: string; googleClientId: string; sharedWorkspaces:boolean };
 const connections = new Map<string, Promise<FirebaseConnection | null>>();
 const lastEmailKey = "fieldwork.google.lastEmail";
 // Google ID tokens this page sent, with the account that issued them (a few recent ones).
@@ -33,7 +33,15 @@ export function firebaseConnection(server = ""): Promise<FirebaseConnection | nu
       popupRedirectResolver:sdk.browserPopupRedirectResolver,
     });
     await auth.authStateReady();
-    return { auth, sdk, origin, googleClientId: googleClientId(config.googleClientId) };
+    let previousUID=auth.currentUser?.uid??"";
+    // A different identity must never inherit mounted editors, queued saves or
+    // recovered drafts. Reload also aborts in-flight requests from the old UI.
+    sdk.onAuthStateChanged(auth,user=>{
+      const next=user?.uid??"";
+      if(previousUID && next!==previousUID){window.location.reload();}
+      previousUID=next;
+    });
+    return { auth, sdk, origin, googleClientId: googleClientId(config.googleClientId),sharedWorkspaces:config.sharedWorkspaces===true };
   })();
   connections.set(origin,loading);
   loading.catch(()=>connections.delete(origin));
@@ -122,7 +130,7 @@ function storeLastEmail(email: string | null) {
 }
 
 // The workspace must accept the new Google sign-in (/api/auth/session) before it counts; otherwise sign out again.
-async function confirmSession(connection: FirebaseConnection, user: User): Promise<User> {
+async function confirmSession(connection: FirebaseConnection, user: User, googleAccount=true): Promise<User> {
   try {
     const response = await fetch(`${connection.origin}/api/auth/session`, {
       headers:{Authorization:`Bearer ${await user.getIdToken()}`},cache:"no-store",redirect:"error",
@@ -133,8 +141,7 @@ async function confirmSession(connection: FirebaseConnection, user: User): Promi
     }
     if (!response.ok) throw new Error("The workspace could not verify your sign-in. Try again.");
     notice = "";
-    storeLastEmail(user.email);
-    googleSignedIn();
+    if(googleAccount){storeLastEmail(user.email);googleSignedIn();}
     return user;
   } catch(error) {
     await connection.sdk.signOut(connection.auth);
@@ -152,6 +159,12 @@ export async function signInGoogle(connection: FirebaseConnection, switchAccount
   provider.setCustomParameters(hint ? {login_hint:hint} : {prompt:"select_account"});
   const result = await connection.sdk.signInWithPopup(connection.auth,provider);
   return confirmSession(connection,result.user);
+}
+
+export async function signInEmail(connection:FirebaseConnection,email:string,password:string,create=false):Promise<User>{
+  if(!connection.sharedWorkspaces)throw new Error("Email sign-in is not enabled for this server.");
+  const result=create?await connection.sdk.createUserWithEmailAndPassword(connection.auth,email,password):await connection.sdk.signInWithEmailAndPassword(connection.auth,email,password);
+  return confirmSession(connection,result.user,false);
 }
 
 /** Quick sign-in: Google's ID token from the browser's account (Google Identity Services) becomes a Firebase sign-in. */

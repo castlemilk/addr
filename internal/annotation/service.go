@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"sort"
+	"strings"
 
 	"connectrpc.com/connect"
 	annotationv1 "github.com/benebsworth/addr/gen/go/annotation/v1"
@@ -87,9 +88,15 @@ func (s *Service) Call(ctx context.Context, method string, data Object) (result 
 	case "SaveAgentReview":
 		return s.saveAgentReview(ctx, data)
 	case "GetInfo":
+		workspace, _ := ctx.Value(workspaceKey{}).(Workspace)
+		accountUID := ""
+		if strings.HasPrefix(actor(ctx), "user:") {
+			accountUID = strings.TrimPrefix(actor(ctx), "user:")
+		}
+		requestID, _ := ctx.Value(requestIDKey{}).(string)
 		adapters := s.Store.AdapterInfos()
 		sort.Slice(adapters, func(i, j int) bool { return adapters[i].ID < adapters[j].ID })
-		return objectOf(Object{"name": "Fieldwork", "version": "1", "adapters": adapters, "storage": s.Store.Driver(), "authRequired": s.AuthRequired, "maxDocumentBytes": MaxDocumentBytes,
+		return objectOf(Object{"name": "Fieldwork", "version": "1", "workspace": workspace, "accountUid": accountUID, "requestId": requestID, "adapters": adapters, "storage": s.Store.Driver(), "authRequired": s.AuthRequired, "maxDocumentBytes": MaxDocumentBytes,
 			"agentReviews": Object{"tool": "save_agent_review", "storage": "item.agentReviews", "humanReview": "item.status and annotation overrides", "humanApproval": false, "trainingEligible": false}})
 	case "ListProjects", "ListItems", "ListLabels", "SearchItems":
 		var req struct {

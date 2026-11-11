@@ -42,12 +42,25 @@ const bundle = await build({
   }],
 });
 
+test("shared OAuth returns a temporary error when Firebase configuration is missing", async t => {
+  const mf = new Miniflare(convertV4MiniflareOptions({
+    modules: true, script: bundle.outputFiles[0].text,
+    compatibilityDate: "2026-10-02", compatibilityFlags: ["global_fetch_strictly_public"],
+    kvNamespaces: ["OAUTH_KV"], durableObjects: { OAUTH_GRANTS: { className: "OAuthGrantCoordinator", useSQLite: true } },
+    bindings: { FIELDWORK_SHARED_WORKSPACES: "true", FIREBASE_PROJECT_ID: "fixture", FIELDWORK_EDITOR_ORIGIN: editorOrigin },
+  }));
+  t.after(() => mf.dispose());
+  const response = await mf.dispatchFetch(`${origin}/oauth/token`, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ grant_type: "refresh_token", client_id: "fixture", refresh_token: "user:grant:token" }) });
+  assert.equal(response.status, 503);
+});
+
 test("the companion gateway composes legacy and scoped OAuth routes", async (t) => {
   const backendCalls = [];
   const mf = new Miniflare(convertV4MiniflareOptions({
     modules: true, script: bundle.outputFiles[0].text,
     compatibilityDate: "2026-10-02", compatibilityFlags: ["global_fetch_strictly_public"],
     kvNamespaces: ["OAUTH_KV"],
+    durableObjects: { OAUTH_GRANTS: { className: "OAuthGrantCoordinator", useSQLite: true } },
     bindings: { ANNOTATION_TOKEN: token, FIELDWORK_EDITOR_ORIGIN: editorOrigin, ACCESS_AUD: audience, FIELDWORK_OWNER_EMAIL: ownerEmail },
     access: { aud: audience, identity: { email: ownerEmail, user_uuid: "gateway-fixture-owner" } },
     serviceBindings: {
@@ -63,7 +76,7 @@ test("the companion gateway composes legacy and scoped OAuth routes", async (t) 
   t.after(() => mf.dispose());
   const send = (path, options = {}) => mf.dispatchFetch(`${origin}${path}`, { redirect: "manual", ...options });
   const authorized = (credential, headers = {}) => ({ headers: { Authorization: `Bearer ${credential}`, ...headers } });
-  const grant = async (scopes) => {
+  const grant = async (scopes, details = false) => {
     const registration = await send("/oauth/register", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ client_name: "Gateway fixture", redirect_uris: [callback], token_endpoint_auth_method: "none", grant_types: ["authorization_code", "refresh_token"], response_types: ["code"] }),
@@ -95,7 +108,7 @@ test("the companion gateway composes legacy and scoped OAuth routes", async (t) 
     });
     assert.equal(response.status, 200, await response.clone().text());
     const tokens = await response.json();
-    return tokens.access_token;
+    return details ? { tokens, client } : tokens.access_token;
   };
 
   await t.test("health and informational routes need no workspace credential", async () => {
@@ -176,5 +189,13 @@ test("the companion gateway composes legacy and scoped OAuth routes", async (t) 
       assert.equal(response.headers.get("Cache-Control"), "no-store");
       assert.equal(response.headers.get("Retry-After"), "5");
     }
+  });
+  await t.test("overlapping owner refreshes return one usable successor", async () => {
+    const { tokens, client } = await grant(["fieldwork:read"], true);
+    const refresh = credential => send("/oauth/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ grant_type: "refresh_token", refresh_token: credential, client_id: client.client_id, resource: `${origin}/mcp` }) });
+    const [a, b] = await Promise.all([refresh(tokens.refresh_token), refresh(tokens.refresh_token)]);
+    assert.equal(a.status, 200); assert.equal(b.status, 200);
+    const first = await a.json(), second = await b.json(); assert.equal(first.access_token, second.access_token); assert.equal(first.refresh_token, second.refresh_token);
+    assert.equal((await refresh(first.refresh_token)).status, 200);
   });
 });

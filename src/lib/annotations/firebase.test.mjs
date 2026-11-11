@@ -37,6 +37,7 @@ function fixture({ config = { googleClientId: CLIENT }, remembered = null, sessi
     static credential(idToken) { return { providerId: "google.com", idToken }; }
   }
   const sdk = {
+ onAuthStateChanged:(_auth,callback)=>{state.authChanged=callback;return()=>{};},
     indexedDBLocalPersistence: { name: "indexedDB" }, browserLocalPersistence: { name: "local" },
     browserSessionPersistence: { name: "session" }, browserPopupRedirectResolver: { name: "resolver" },
     initializeAuth: (app, deps) => { state.init.push(deps); return auth; },

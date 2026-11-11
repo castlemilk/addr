@@ -22,10 +22,15 @@
   },
   "vars": {
     "ANNOTATION_ALLOWED_ORIGINS": "https://fieldwork-annotations.ben-ebsworth.workers.dev",
-    "GOOGLE_OAUTH_CLIENT_ID": "1046530555412-3gs210m74r2bosv5sj3lu111g20sliqs.apps.googleusercontent.com"
+    "GOOGLE_OAUTH_CLIENT_ID": "1046530555412-3gs210m74r2bosv5sj3lu111g20sliqs.apps.googleusercontent.com",
+    "FIELDWORK_SHARED_WORKSPACES": "true",
+    "FIELDWORK_LEGACY_OWNER_EMAIL": "ben.ebsworth@gmail.com"
   },
   "r2_buckets": [
-    { "binding": "ANNOTATION_BLOBS", "bucket_name": "fieldwork-private-assets" }
+    {
+      "binding": "ANNOTATION_BLOBS",
+      "bucket_name": "fieldwork-private-assets"
+    }
   ],
   "containers": [
     {
@@ -38,11 +43,21 @@
   ],
   "durable_objects": {
     "bindings": [
-      { "name": "ANNOTATION_BACKEND", "class_name": "AnnotationBackend" }
+      {
+        "name": "ANNOTATION_BACKEND",
+        "class_name": "AnnotationBackend"
+      }
     ]
   },
   "migrations": [
-    { "tag": "v1", "new_sqlite_classes": ["AnnotationBackend"] }
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "AnnotationBackend"
+      ]
+    }
   ],
-  "observability": { "enabled": true }
+  "observability": {
+    "enabled": true
+  }
 }
