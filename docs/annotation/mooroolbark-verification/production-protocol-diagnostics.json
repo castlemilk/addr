@@ -1,0 +1,87 @@
+{
+  "at": "2026-09-27T04:35:58.662782+00:00",
+  "origin": "https://fieldwork-annotations.ben-ebsworth.workers.dev",
+  "concurrentReadOnlyRequests": 4,
+  "results": [
+    {
+      "protocol": "rest",
+      "method": "ListItems",
+      "request": {
+        "projectId": "mooroolbark",
+        "limit": 100
+      },
+      "status": 200,
+      "bytes": 7772780,
+      "contentType": "application/json",
+      "keys": [
+        "items",
+        "nextCursor"
+      ],
+      "items": 82,
+      "itemId": null,
+      "labels": null,
+      "nextCursor": "addr-scene-mooroolbark-50011498-17-118441-80417",
+      "seconds": 24.016
+    },
+    {
+      "protocol": "connect",
+      "method": "ListItems",
+      "request": {
+        "projectId": "mooroolbark",
+        "limit": 100
+      },
+      "status": 200,
+      "bytes": 8202735,
+      "contentType": "application/json",
+      "keys": [
+        "items",
+        "nextCursor"
+      ],
+      "items": 82,
+      "itemId": null,
+      "labels": null,
+      "nextCursor": "addr-scene-mooroolbark-50011498-17-118441-80417",
+      "seconds": 34.886
+    },
+    {
+      "protocol": "rest",
+      "method": "GetItem",
+      "request": {
+        "id": "example-image"
+      },
+      "status": 200,
+      "bytes": 882,
+      "contentType": "application/json",
+      "keys": [
+        "item",
+        "labels",
+        "labelsNextCursor"
+      ],
+      "items": null,
+      "itemId": "example-image",
+      "labels": 1,
+      "nextCursor": null,
+      "seconds": 0.997
+    },
+    {
+      "protocol": "connect",
+      "method": "GetItem",
+      "request": {
+        "id": "example-image"
+      },
+      "status": 200,
+      "bytes": 923,
+      "contentType": "application/json",
+      "keys": [
+        "item",
+        "labels",
+        "labelsNextCursor"
+      ],
+      "items": null,
+      "itemId": "example-image",
+      "labels": 1,
+      "nextCursor": null,
+      "seconds": 0.589
+    }
+  ]
+}

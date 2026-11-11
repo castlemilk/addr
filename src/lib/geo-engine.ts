@@ -199,7 +199,14 @@ export function reverseGeocode(
     .filter((a) => (a.distance_meters ?? Infinity) <= maxRadiusMeters)
     .sort((a, b) => (a.distance_meters ?? 0) - (b.distance_meters ?? 0));
 
-  const bestPlace = scoredPlaces.length > 0 && (scoredPlaces[0].distance_meters ?? Infinity) <= 50 ? scoredPlaces[0] : null;
+  // Headline POI join radius. MUST mirror the Go service
+  // (internal/geo/store.go headlinePoiRadiusMeters = 25.0): a POI only
+  // headlines as poi_and_address when the tap is on/very near it. This engine
+  // serves the /api/reverse fallback when the Go service is unreachable, so a
+  // wider radius here would re-join distant POIs the Go path just fixed
+  // (e.g. LKPT Fitness at 29 Cambridge Rd headlining a 27 Cambridge tap).
+  const HEADLINE_POI_RADIUS_M = 25.0;
+  const bestPlace = scoredPlaces.length > 0 && (scoredPlaces[0].distance_meters ?? Infinity) <= HEADLINE_POI_RADIUS_M ? scoredPlaces[0] : null;
   const bestAddress = scoredAddresses.length > 0 ? scoredAddresses[0] : null;
 
   // Determine match type
@@ -237,7 +244,11 @@ export function reverseGeocode(
   return {
     query: { lat, lon },
     match_type: matchType,
-    place: bestPlace || (scoredPlaces.length > 0 ? scoredPlaces[0] : null),
+    // Mirror the Go service: only the headlining POI is exposed as `place`.
+    // Nearby POIs stay in `nearby_places`. Exposing the nearest POI here
+    // regardless of match_type made the sidebar render distant POIs as if
+    // they belonged to the tapped address.
+    place: bestPlace,
     address: bestAddress,
     formatted_title: formattedTitle,
     formatted_subtitle: formattedSubtitle,

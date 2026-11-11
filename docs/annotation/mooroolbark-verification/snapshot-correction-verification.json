@@ -1,0 +1,38 @@
+{
+  "snapshotId": "6d8811d04524eeb196c654ac3647fb32f11d14813f4ff58eb1fb5a747f238572",
+  "previousDiagnosticSnapshotId": "df85e2a776e9bd1acfbbeb70bf9937581fbf6cb7444758f364fb69278156ff25",
+  "addedFiles": 19,
+  "changedPriorByteHashes": 5,
+  "metadataChanged": 533,
+  "removedFiles": 0,
+  "files": 14330,
+  "addedPaths": [
+    "data/reviews/eyes/structure-kinds/review-page/img/crop-7fdd138f.jpg",
+    "data/reviews/eyes/structure-kinds/review-page/img/crop-9a4df391.jpg",
+    "data/reviews/eyes/structure-kinds/review-page/img/fresh-sheet.jpg",
+    "data/reviews/eyes/structure-kinds/review-page/img/hits-page-00.jpg",
+    "data/reviews/eyes/structure-kinds/review-page/img/hits-page-01.jpg",
+    "data/reviews/eyes/structure-kinds/review-page/img/hits-sheet.jpg",
+    "data/reviews/eyes/structure-kinds/review-page/img/ocr-crop-nursery.jpg",
+    "data/reviews/eyes/structure-kinds/review-page/img/ocr-crop-watermark.jpg",
+    "data/reviews/eyes/structure-kinds/review-page/img/page-00.jpg",
+    "data/reviews/eyes/structure-kinds/review-page/img/page-01.jpg",
+    "data/reviews/eyes/structure-kinds/review-page/img/page-02.jpg",
+    "data/reviews/eyes/structure-kinds/review-page/img/page-03.jpg",
+    "data/reviews/eyes/structure-kinds/review-page/img/page-04.jpg",
+    "data/reviews/eyes/structure-kinds/review-page/img/page-05.jpg",
+    "data/reviews/eyes/structure-kinds/review-page/index.html",
+    "docs/annotation-deployment.md",
+    "scripts/ml/annotation_check.py",
+    "scripts/ml/requirements.txt",
+    "scripts/verify_annotation_restore.py"
+  ],
+  "changedBytePaths": [
+    "Taskfile.yml",
+    "data/fieldwork-derived/mooroolbark/processing-summary.json",
+    "data/fieldwork-derived/mooroolbark/processing.json",
+    "docs/roof-eyes.md",
+    "scripts/ml/structure_kinds_optical.py"
+  ],
+  "scope": "Final corrected and expanded snapshot is independently verified; previous snapshot retained only for diagnosis."
+}

@@ -1,0 +1,8 @@
+# Keep actual values in .dev.vars, which is ignored by Git.
+DATABASE_URL="postgresql://ROLE:PASSWORD@ENDPOINT-pooler.ap-southeast-2.aws.neon.tech/fieldwork?sslmode=verify-full"
+DATABASE_URL_UNPOOLED="postgresql://ROLE:PASSWORD@ENDPOINT.ap-southeast-2.aws.neon.tech/fieldwork?sslmode=verify-full"
+ANNOTATION_TOKEN="replace-with-at-least-24-random-characters"
+# Firebase web app config (not a service-account private key). Leave both empty to disable Google login.
+FIREBASE_WEB_CONFIG=''
+# Exact Google email addresses with access to all projects in this workspace.
+FIREBASE_ALLOWED_EMAILS=''

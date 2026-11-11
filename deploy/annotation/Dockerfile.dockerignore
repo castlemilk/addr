@@ -1,0 +1,13 @@
+**
+!go.mod
+!go.sum
+!cmd/
+!cmd/annotation-server/
+!cmd/annotation-server/**
+!internal/
+!internal/annotation/
+!internal/annotation/**
+!gen/
+!gen/go/
+!gen/go/annotation/
+!gen/go/annotation/**

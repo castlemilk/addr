@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Addr CRM synthetic MCP test host</title>
+<style>body{margin:0;font:14px system-ui;background:#eee;color:#222}header{padding:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}button{padding:6px;font:inherit}iframe{width:100%;min-height:780px;border:0;background:white}pre{white-space:pre-wrap;padding:12px;font-size:11px}</style></head>
+<body>
+<header><strong>Synthetic MCP host · no real CRM data</strong><button id="theme">Toggle theme</button><button id="fail">Fail next item read</button><button id="clear">Clear chat attachment</button></header>
+<iframe id="app" title="Addr CRM synthetic workspace" src="/app.html" sandbox="allow-scripts allow-same-origin"></iframe>
+<pre id="log" aria-label="Protocol log"></pre>
+<script>
+const frame=document.getElementById('app'), log=document.getElementById('log'), requests=[];
+let theme='light',failNext=false,updateId=0;
+const projects=[{id:'mooroolbark',name:'Mooroolbark',description:'Synthetic scene review project',revision:2},{id:'synthetic',name:'Synthetic CRM examples',description:'Another synthetic project',revision:1}];
+const labels=[{id:'building',projectId:'mooroolbark',name:'Buildings',color:'#ff6600'},{id:'tree',projectId:'mooroolbark',name:'Trees',color:'#227744'}];
+const items=[{id:'house-29785',projectId:'mooroolbark',title:'19 Cambridge Road',adapter:'addr-scene',revision:3,status:'in_review',updatedAt:'2026-10-06T00:00:00Z',notes:'Synthetic scene notes',source:{sceneId:'house-29785'},metadata:{},tags:[],annotations:[
+{id:'sail-1',labelId:'building',geometry:{type:'Polygon',coordinates:[[[0.1,0.1],[0.3,0.1],[0.2,0.3],[0.1,0.1]]]},properties:{addr:{kind:'building',structure_kind:'shade-sail',overrides:{kind:'building',label:'Fabric shade sail',status:'needs_adjustment',geometry_reviewed:false,notes:'Outline pending review in the wider image.'}}}},
+{id:'tree-1',labelId:'tree',geometry:{type:'Polygon',coordinates:[[[0.4,0.4],[0.5,0.4],[0.5,0.5],[0.4,0.4]]]},properties:{addr:{kind:'tree',overrides:{kind:'tree',label:'Tree canopy',status:'confirmed',geometry_reviewed:true,notes:'Synthetic reviewed canopy.'}}}}
+]},{id:'house-29790',projectId:'mooroolbark',title:'27 Cambridge Road',adapter:'addr-scene',revision:2,status:'unreviewed',updatedAt:'2026-10-06T00:00:00Z',annotations:[]},{id:'sample-1',projectId:'synthetic',title:'<img src=x onerror=alert(1)> literal item title',adapter:'image',revision:1,status:'approved',annotations:[]}];
+function send(message){frame.contentWindow.postMessage({jsonrpc:'2.0',...message},'*')}
+function result(id,value){send({id,result:value})}
+function notify(method,params){send({method,params})}
+function tool(data){return {content:[{type:'text',text:JSON.stringify(data)}],structuredContent:data}}
+window.addEventListener('message',event=>{
+ if(event.source!==frame.contentWindow||event.data?.jsonrpc!=='2.0')return;
+ const message=event.data;
+ if(message.method==='ui/notifications/size-changed'){frame.style.height=`${Math.max(780,message.params.height)}px`;return}
+ if(message.method==='ui/notifications/initialized'){notify('ui/notifications/tool-result',tool({title:'Addr CRM',projects,nextCursor:'',editorUrl:'https://fieldwork-annotations.ben-ebsworth.workers.dev/'}));return}
+ if(!message.method||message.id==null)return;
+ requests.push({method:message.method,params:message.params});log.textContent=JSON.stringify(requests,null,2);
+ if(message.method==='ui/initialize')result(message.id,{protocolVersion:message.params.protocolVersion,hostInfo:{name:'Synthetic CRM host',version:'1.0.0'},hostCapabilities:{serverTools:{},openLinks:{},updateModelContext:{resourceLink:{}},experimental:{'openai/modelContext':{}}},hostContext:{theme}});
+ else if(message.method==='tools/call'){
+  const {name,arguments:args}=message.params;
+  if(name==='list_projects')result(message.id,tool({projects:projects.filter(p=>p.name.toLowerCase().includes((args.query||'').toLowerCase())),nextCursor:''}));
+  else if(name==='list_items')result(message.id,tool({items:items.filter(i=>i.projectId===args.projectId&&i.title.toLowerCase().includes((args.query||'').toLowerCase())),nextCursor:''}));
+  else if(name==='get_item'){
+   if(failNext){failNext=false;result(message.id,{isError:true,content:[{type:'text',text:'Synthetic item read unavailable'}]})}
+   else result(message.id,tool({item:items.find(i=>i.id===args.id),labels,labelsNextCursor:''}));
+  }else result(message.id,{isError:true,content:[{type:'text',text:'Unexpected synthetic tool'}]});
+ }else if(message.method==='ui/update-model-context'){
+  const context={content:message.params.content,updateId:`fixture-${++updateId}`};
+  result(message.id,{_meta:{'openai/modelContext':{updateId:context.updateId}}});notify('ui/notifications/host-context-changed',{'openai/modelContext':context});
+ }else if(message.method==='ui/open-link')result(message.id,{});
+ else send({id:message.id,error:{code:-32601,message:'Unexpected synthetic method'}});
+});
+document.getElementById('theme').onclick=()=>{theme=theme==='light'?'dark':'light';notify('ui/notifications/host-context-changed',{theme})};
+document.getElementById('fail').onclick=()=>{failNext=true};
+document.getElementById('clear').onclick=()=>notify('ui/notifications/host-context-changed',{'openai/modelContext':null});
+</script></body></html>

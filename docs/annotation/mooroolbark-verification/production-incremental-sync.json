@@ -1,0 +1,40 @@
+{
+  "checkedAt": "2026-09-27T04:44:31.036331+00:00",
+  "scope": "Fresh production incremental CLI mirror; all documents compared with the frozen import plan before feedback edits.",
+  "snapshotId": "6d8811d04524eeb196c654ac3647fb32f11d14813f4ff58eb1fb5a747f238572",
+  "origin": "https://fieldwork-annotations.ben-ebsworth.workers.dev",
+  "projectId": "mooroolbark",
+  "cursor": "535",
+  "items": 507,
+  "labels": 10,
+  "annotations": 43316,
+  "mirrorBytes": 49150838,
+  "exactProjectedDocumentParity": true,
+  "allInitialRevisions": true,
+  "firstSync": {
+    "origin": "https://fieldwork-annotations.ben-ebsworth.workers.dev",
+    "projectId": "mooroolbark",
+    "fromCursor": "0",
+    "cursor": "535",
+    "changes": 518,
+    "upserts": 518,
+    "deletes": 0,
+    "items": 507,
+    "labels": 10,
+    "updated": true,
+    "file": "/Users/benebsworth/projects/addr/data/fieldwork-sync/mooroolbark/mirror.json"
+  },
+  "secondSync": {
+    "origin": "https://fieldwork-annotations.ben-ebsworth.workers.dev",
+    "projectId": "mooroolbark",
+    "fromCursor": "535",
+    "cursor": "535",
+    "changes": 0,
+    "upserts": 0,
+    "deletes": 0,
+    "items": 507,
+    "labels": 10,
+    "updated": false,
+    "file": "/Users/benebsworth/projects/addr/data/fieldwork-sync/mooroolbark/mirror.json"
+  }
+}

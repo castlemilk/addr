@@ -9,6 +9,7 @@ Endpoints:
     GET /healthz
     GET /stats
     GET /tile/{z}/{x}/{y}.pbf
+    GET /depth/{z}/{x}/{y}.json
 
 Usage:
     python -m scripts.ml.server --port 8090 --heights
@@ -40,6 +41,7 @@ from .tiles import MBTilesWriter
 
 LOGGER = logging.getLogger("ml.server")
 TILE_PATH = re.compile(r"^/tile/(\d{1,2})/(\d+)/(\d+)\.pbf$")
+DEPTH_PATH = re.compile(r"^/depth/(\d{1,2})/(\d+)/(\d+)\.json$")
 MAX_ZOOM = 22
 
 
@@ -180,6 +182,33 @@ class GenerationCoordinator:
                 self._inflight.pop(key, None)
             event.set()  # type: ignore[union-attr]
 
+    def get_depth(self, z: int, x: int, y: int, size: int = 65) -> dict | None:
+        """Relative depth relief (0..1, min-max normalized) for a tile window.
+
+        Includes terrain, buildings, and canopies; the studio maps it to metres
+        and carves the footprint flat at the local ground level.
+        """
+        import numpy as np
+        from PIL import Image
+
+        ctx = self.context()
+        if ctx.depth_estimator is None:
+            return None
+        window = ctx.fetcher.window(z, x, y)
+        depth = ctx.depth_estimator.estimate(window.image)
+        image = Image.fromarray(
+            (np.clip(depth, 0.0, 1.0) * 255.0).astype("uint8"), mode="L"
+        ).resize((size, size), Image.Resampling.BILINEAR)
+        values = [round(float(value) / 255.0, 4) for value in np.asarray(image).ravel()]
+        return {
+            "z": z,
+            "x": x,
+            "y": y,
+            "size": size,
+            "metersPerWidth": round(window.tile_span_meters, 1),
+            "values": values,
+        }
+
     def stats(self) -> dict:
         with self._inflight_lock:
             inflight = len(self._inflight)
@@ -194,7 +223,10 @@ class GenerationCoordinator:
             "cache": self.cache.stats(),
         }
 
-    def _generate(self, z: int, x: int, y: int) -> bytes | None:
+    def _generate(self, z: int, x: int, y: int, *, expand: bool = True) -> bytes | None:
+        """Generate one tile. `expand` enqueues the eight neighbours for prefetch and is set only for
+        client-requested tiles: a prefetched tile never fans out again, and an empty tile (no imagery or no
+        detections) fans out to nothing, so the crawl stays one ring around what a viewer actually asked for."""
         started = time.time()
         try:
             with self._semaphore:
@@ -220,7 +252,7 @@ class GenerationCoordinator:
             time.time() - started,
             len(payload),
         )
-        if self.prefetch:
+        if self.prefetch and expand and raw:
             self._enqueue_neighbors(z, x, y)
         return payload
 
@@ -258,7 +290,7 @@ class GenerationCoordinator:
                 if found:
                     continue
                 z, x, y = key
-                self._generate(z, x, y)
+                self._generate(z, x, y, expand=False)
                 self.prefetched += 1
             except Exception:
                 LOGGER.exception("prefetch failed for tile %s", key)
@@ -306,9 +338,28 @@ class TileRequestHandler(BaseHTTPRequestHandler):
             self._send_json(200, coordinator.stats())
             return
 
+        match = DEPTH_PATH.match(path)
+        if match:
+            z = int(match.group(1))
+            x = int(match.group(2))
+            y = int(match.group(3))
+            limit = 1 << z
+            if z > MAX_ZOOM or not (0 <= x < limit and 0 <= y < limit):
+                self._send_json(400, {"error": "tile coordinates out of range"})
+                return
+            payload = coordinator.get_depth(z, x, y)
+            if payload is None:
+                self._send_json(503, {"error": "depth model not loaded"})
+                return
+            self._send_json(200, payload)
+            return
+
         match = TILE_PATH.match(path)
         if not match:
-            self._send_json(404, {"error": "not found", "hint": "/tile/{z}/{x}/{y}.pbf"})
+            self._send_json(
+                404,
+                {"error": "not found", "hint": "/tile/{z}/{x}/{y}.pbf or /depth/{z}/{x}/{y}.json"},
+            )
             return
 
         z = int(match.group(1))
@@ -375,6 +426,8 @@ def build_config(args: argparse.Namespace) -> PipelineConfig:
         sam3_min_iou=args.sam3_min_iou,
         sam3_trees=args.sam3_trees,
         sam3_tree_prompt=args.sam3_tree_prompt,
+        sam3_min_evidence=args.sam3_min_evidence,
+        max_building_vegetation_ratio=args.max_building_vegetation,
         use_osm=False,
         heuristic=args.heuristic,
         procedural=args.procedural,
@@ -431,6 +484,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--sam3-threshold", default=0.4, type=float)
     parser.add_argument("--sam3-min-iou", default=0.3, type=float)
     parser.add_argument("--sam3-trees", action="store_true", help="also refine/complete tree canopies with SAM3")
+    parser.add_argument("--sam3-min-evidence", default=0.0, type=float)
+    parser.add_argument("--max-building-vegetation", default=0.7, type=float)
     parser.add_argument("--sam3-tree-prompt", default="tree")
     parser.add_argument("--sam3-models-dir", default=None, type=Path)
     parser.add_argument("--heuristic", action="store_true")

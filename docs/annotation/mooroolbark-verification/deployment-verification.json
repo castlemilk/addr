@@ -1,0 +1,52 @@
+{
+  "url": "https://fieldwork-annotations.ben-ebsworth.workers.dev",
+  "versionId": "1e198101-76db-4230-830b-3d33e6f6c43b",
+  "imageDigest": "sha256:f06d46d5252f50ca144093dc5ceaf6d7013eafbcb5ad2b884750a2faa6ac160f",
+  "checks": [
+    {
+      "path": "/",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "path": "/healthz",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "path": "/readyz",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "path": "/api/v1/assets/0000000000000000000000000000000000000000000000000000000000000000",
+      "status": 401,
+      "expected": 401
+    },
+    {
+      "path": "asset with untrusted Origin",
+      "status": 403,
+      "expected": 403
+    }
+  ],
+  "productionTokenUsed": false,
+  "datasetUploaded": false,
+  "frontend": {
+    "script": "/assets/index-D_Er4hO6.js",
+    "sha256": "8d9f04dc0a8c4ddb1feb969140e3ff50ae8d6935cda87bb3b07e83239c373b1f",
+    "matchesLocalBuild": true
+  },
+  "assetCacheControl": "private, no-store, no-transform",
+  "ready": {
+    "status": "ready"
+  },
+  "container": {
+    "id": "a03e7a53-0294-4cb8-9cf8-5164b7b9a053",
+    "name": "fieldwork-annotations-annotationbackend",
+    "state": "active",
+    "instances": 1,
+    "image": "registry.cloudflare.com/2132ccf47ceb5fff234c34d85490470a/fieldwork-annotations-annotationbackend@sha256:f06d46d5252f50ca144093dc5ceaf6d7013eafbcb5ad2b884750a2faa6ac160f",
+    "version": 2,
+    "updated_at": "2026-09-27T03:02:04.944Z"
+  }
+}

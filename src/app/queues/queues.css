@@ -1,0 +1,104 @@
+/* Review queues workspace. Owner of every .queues-* rule. Consumes the --review-* tokens from
+   .review-shell (reviews.css) and the shared header from shell.css. Borders, not shadows;
+   8 px panels; tabular figures for counts; nothing below 11 px; sentence case throughout. */
+.queues-shell { font-size: 13px; line-height: 1.5; }
+.queues-content { max-width: 1240px; margin: 0 auto; padding: 28px 28px 56px; display: grid; gap: 30px; min-width: 0; overflow-wrap: anywhere; }
+.queues-title h1, .queues-report h1 { font-size: 23px; line-height: 1.2; font-weight: 600; }
+.queues-title p { margin-top: 6px; font-size: 12px; color: var(--review-muted); }
+.queues-section { display: grid; gap: 12px; scroll-margin-top: 20px; }
+.queues-section h2 { font-size: 14px; font-weight: 600; }
+.queues-intro { font-size: 12px; line-height: 1.6; color: var(--review-muted); max-width: 84ch; }
+.queues-band { display: grid; gap: 10px; }
+.queues-band-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
+.queues-band-heading h3 { font-size: 13px; font-weight: 600; }
+.queues-progress { font-size: 12px; font-variant-numeric: tabular-nums; }
+.queues-interval { font-size: 12px; color: var(--review-muted); }
+.queues-panel { border: 1px solid var(--review-line); border-radius: 8px; overflow-x: auto; max-width: 100%; }
+.queues-table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.queues-table thead { background: var(--review-surface); }
+.queues-table th { text-align: left; font-weight: 500; font-size: 11px; color: var(--review-muted); padding: 11px 14px; border-bottom: 1px solid var(--review-line); white-space: nowrap; }
+.queues-table td { padding: 10px 14px; border-bottom: 1px solid var(--review-line); vertical-align: top; white-space: nowrap; }
+.queues-table td:first-child { white-space: normal; min-width: 200px; }
+.queues-table tbody tr:last-child td { border-bottom: 0; }
+.queues-table tbody tr:hover { background: var(--review-surface); }
+.queues-table a, .queues-line a, .queues-checkpoint a, .queues-report-actions a { color: var(--review-accent); text-decoration: underline; text-underline-offset: 3px; }
+.queues-table a:hover, .queues-line a:hover, .queues-checkpoint a:hover, .queues-report-actions a:hover { color: #92e6f0; }
+.queues-muted { color: var(--review-muted); }
+.queues-secondary { display: block; margin-top: 2px; font-size: 11px; color: var(--review-muted); font-variant-numeric: tabular-nums; }
+.queues-status { display: inline-flex; align-items: center; gap: 6px; font-weight: 500; }
+.queues-status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+.queues-status-pending { color: var(--review-muted); }
+.queues-status-approval { color: #8ce2ba; }
+.queues-status-rejection { color: #fba5a9; }
+.queues-status-correction { color: #f4cc89; }
+.queues-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; font-size: 13px; }
+.queues-state { padding: 14px 16px; border: 1px dashed var(--review-line); border-radius: 8px; font-size: 12px; color: var(--review-muted); }
+.queues-error { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 0; }
+.queues-visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.queues-checkpoints { list-style: none; margin: 0; padding: 0; border: 1px solid var(--review-line); border-radius: 8px; }
+.queues-checkpoint { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 20px; padding: 14px 16px; border-bottom: 1px solid var(--review-line); }
+.queues-checkpoint:last-child { border-bottom: 0; }
+.queues-checkpoint h3 { font-size: 13px; font-weight: 600; }
+.queues-checkpoint time { font-size: 12px; color: var(--review-muted); font-variant-numeric: tabular-nums; }
+.queues-checkpoint p { grid-column: 1 / -1; font-size: 12px; color: var(--review-muted); }
+.queues-checkpoint a { grid-column: 1 / -1; font-size: 12px; width: fit-content; }
+.queues-report { display: grid; gap: 14px; max-width: 960px; min-width: 0; }
+.queues-report-actions { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12px; }
+.queues-report-actions a { display: inline-flex; align-items: center; gap: 6px; }
+.queues-report-meta { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12px; color: var(--review-muted); font-variant-numeric: tabular-nums; }
+.queues-report-body { display: grid; gap: 12px; font-size: 13px; line-height: 1.6; min-width: 0; }
+.queues-report-body h1, .queues-report-body h2 { font-size: 14px; font-weight: 600; margin-top: 12px; }
+.queues-report-body h3, .queues-report-body h4 { font-size: 13px; font-weight: 600; }
+.queues-report-body p, .queues-report-body li { font-size: 13px; }
+.queues-report-body ul, .queues-report-body ol { padding-left: 20px; display: grid; gap: 4px; }
+.queues-report-body ul { list-style: disc; }
+.queues-report-body ol { list-style: decimal; }
+.queues-report-body a { color: var(--review-accent); text-decoration: underline; text-underline-offset: 3px; }
+.queues-report-body code { font-family: var(--font-geist-mono), ui-monospace, monospace; font-size: 12px; background: var(--review-surface); border-radius: 4px; padding: 1px 4px; }
+.queues-report-body pre { overflow-x: auto; padding: 12px; border: 1px solid var(--review-line); border-radius: 8px; background: var(--review-surface); }
+.queues-report-body pre code { background: none; padding: 0; }
+.queues-report-body table { display: block; max-width: 100%; overflow-x: auto; border: 1px solid var(--review-line); border-radius: 8px; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.queues-report-body th { text-align: left; font-weight: 500; font-size: 11px; color: var(--review-muted); background: var(--review-surface); padding: 10px 12px; border-bottom: 1px solid var(--review-line); white-space: nowrap; }
+.queues-report-body td { padding: 9px 12px; border-bottom: 1px solid var(--review-line); vertical-align: top; }
+.queues-report-body tbody tr:last-child td { border-bottom: 0; }
+@media (max-width: 650px) {
+  .queues-content { padding: 18px 14px 40px; gap: 24px; }
+  .queues-title h1, .queues-report h1 { font-size: 20px; }
+  .queues-checkpoint { grid-template-columns: minmax(0, 1fr); }
+  .queues-table td:first-child { min-width: 160px; }
+}
+/* Building class hints: quiet pill badges per row, tooltip carries the evidence; a client-side filter checkbox. */
+.queues-title-row { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 20px; }
+.queues-filter { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--review-muted); }
+.queues-filter input { width: 14px; height: 14px; margin: 0; accent-color: var(--review-accent); }
+.queues-filter-note { font-size: 12px; color: var(--review-muted); font-variant-numeric: tabular-nums; }
+.queues-hints { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.queues-hint { display: inline-flex; align-items: center; padding: 1px 7px; border: 1px solid var(--review-line); border-radius: 999px; font-size: 11px; line-height: 1.5; color: var(--review-muted); background: var(--review-surface); white-space: nowrap; cursor: help; }
+.queues-hint-tree-like { border-color: #4f7a5a; color: #9fd8ac; }
+.queues-hint-secondary-structure { border-color: #6c6a52; color: #d9cf9a; }
+.queues-hint-non-residential-context { border-color: #5a6e86; color: #a9c4e0; }
+.queues-hint-commercial { border-color: #7a5a6e; color: #dcb0c8; }
+/* Structure-kind hints (structure-kinds-v3): the same quiet pill, one neutral tone for every kind; fragments are
+   quieter still because they say the outline is a piece of something, not a building to classify. */
+.queues-hint-structure { border-color: #4f6272; color: #b9c9d8; }
+.queues-hint-structure.queues-hint-fragment { border-style: dashed; color: var(--review-muted); background: transparent; }
+.queues-structure-count { font-variant-numeric: tabular-nums; }
+/* Per-table "Show fragments (N)" checkbox: the same quiet native control as Hide flagged, sitting last in the heading row. */
+.queues-fragments { font-variant-numeric: tabular-nums; }
+.queues-band-heading .queues-fragments { margin-left: auto; }
+/* Decision-policy tier badges (decision-policy-v1): the same quiet pill, one tone per tier so a glance tells them apart
+   without shouting; the title carries the machine label and reasons. A count line per table and a per-table
+   "Hide auto tier (N)" checkbox, the same quiet native control as Show fragments. */
+.queues-hint-decision { border-color: #4f6272; color: #b9c9d8; }
+.queues-hint-decision.queues-hint-tier-auto { border-color: #4f7a5a; color: #9fd8ac; }
+.queues-hint-decision.queues-hint-tier-assist { border-color: #6c6a52; color: #d9cf9a; }
+.queues-hint-decision.queues-hint-tier-review { border-color: #7a5a6e; color: #dcb0c8; }
+.queues-decision-count { font-variant-numeric: tabular-nums; }
+.queues-auto-tier { font-variant-numeric: tabular-nums; }
+.queues-band-heading .queues-auto-tier { margin-left: auto; }
+.queues-band-heading .queues-fragments + .queues-auto-tier { margin-left: 0; }
+.queues-table-filters { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+/* Machine labelled table: the same panel as the other queues; the roof cell wraps its scene id, the confidence cell its model range. */
+.queues-machine-summary { font-variant-numeric: tabular-nums; }
+.queues-table[data-queue="machine-labelled"] td:nth-child(2) { white-space: normal; min-width: 160px; }
+.queues-table[data-queue="machine-labelled"] td:nth-child(2) .queues-hints { margin-top: 4px; }

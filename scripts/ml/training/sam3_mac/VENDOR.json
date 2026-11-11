@@ -1,0 +1,37 @@
+{
+  "fork": {
+    "url": "https://github.com/MaximeLglr/sam3-apple-silicon",
+    "commit": "5bf8841",
+    "commit_date": "2025-11-22",
+    "subject": "Adapt for Mac inference (Image only)",
+    "note": "Upstream facebookresearch/sam3 at 84cc43bc (2025-11-19) plus two commits: packaging (packages = find) and an image-only Mac inference commit (Triton EDT optional with an OpenCV fallback, coordinate caches on cuda-or-cpu, pin_memory removed, model.to(device) for any device string, decord import stubbed). Video, eval and test code are still present in the tree; nothing targets MPS and training is untouched. Cloned into scripts/ml/training/vendor/sam3-apple-silicon (gitignored)."
+  },
+  "patches": {
+    "dir": "scripts/ml/training/sam3_mac/patches",
+    "apply": "sh scripts/ml/training/sam3_mac/patches/apply.sh",
+    "list": [
+      {"file": "0001-optional-triton-focal-loss.patch", "why": "sam3/train/loss/sigmoid_focal_loss.py imports Triton unconditionally; Triton has no macOS build. The patch guards the import, shims the decorators so the never-launched kernels still define, and routes triton_sigmoid_focal_loss / _reduce to the reference torch focal loss when Triton is missing."},
+      {"file": "0002-decoder-coords-device.patch", "why": "sam3/model/decoder.py precomputes the box-RPB coordinate cache on CUDA-or-CPU at construction; on MPS the boxes live on mps:0 and the subtraction raised a device mismatch. The patch prefers MPS when available and moves a cache built elsewhere to the reference boxes' device on first use. It also makes the decoder FFN's autocast-off block device-agnostic: a device_type='cuda' context does not switch bf16 off on MPS, so the FFN silently ran in bf16 where upstream runs it in fp32."}
+    ]
+  },
+  "upstream": {
+    "url": "https://github.com/facebookresearch/sam3",
+    "checked_head": "2345a4a",
+    "checked_head_date": "2026-09-18",
+    "note": "Fetched as remote `upstream` inside the vendored clone for diffs; no MPS references in sam3/*.py at that head."
+  },
+  "weights": {
+    "repo_id": "facebook/sam3",
+    "gated": "manual approval on Hugging Face; the pipeline owner has access",
+    "files": ["sam3.pt", "config.json"],
+    "size_gb": 3.45,
+    "local_dir": "scripts/ml/models/sam3-hf",
+    "fetch": "scripts/ml/training/sam3_mac/fetch_weights.sh (needs `hf auth login` once, or HF_TOKEN in the environment)"
+  },
+  "venv": {
+    "path": "scripts/ml/training/.venv-sam3",
+    "python": "3.12",
+    "create": "uv venv scripts/ml/training/.venv-sam3 --python 3.12 && uv pip install --python scripts/ml/training/.venv-sam3/bin/python torch torchvision -e 'scripts/ml/training/vendor/sam3-apple-silicon[train]' pycocotools opencv-python-headless einops scikit-image shapely pillow psutil rasterio onnxruntime tokenizers scipy 'huggingface_hub[cli]'",
+    "checked": {"torch": "2.14.0", "torchvision": "0.29.0", "numpy": "2.5.3", "mps": true, "bf16_autocast_mps": true}
+  }
+}

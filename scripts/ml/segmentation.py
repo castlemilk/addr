@@ -92,7 +92,7 @@ def mask_to_polygons(
         changes = np.diff(row.astype(np.int8), prepend=0, append=0)
         starts = np.flatnonzero(changes == 1)
         ends = np.flatnonzero(changes == -1)
-        for x0, x1 in zip(starts, ends):
+        for x0, x1 in zip(starts, ends, strict=False):
             rectangles.append(box(float(x0), float(y), float(x1), float(y + 1)))
 
     if not rectangles:

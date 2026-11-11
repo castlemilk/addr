@@ -1,0 +1,10 @@
+{
+  "snapshotId": "6d8811d04524eeb196c654ac3647fb32f11d14813f4ff58eb1fb5a747f238572",
+  "documents": 518,
+  "changes": 518,
+  "checkpoint": "518",
+  "allDocumentsExactlyMatchPristinePlan": true,
+  "allEventsCreateAtRevision1": true,
+  "identicalReimportAddedNoHistory": true,
+  "scope": "Captured before browser editing on the final isolated fixture."
+}

@@ -19,7 +19,8 @@ export function createGoogleMapsStyle(
   enable3D = true,
   enableAiSatellite = true,
   satelliteVintage: SatelliteVintage = "google-latest",
-  enableTrees = true
+  enableTrees = true,
+  enableLoD2Houses = true
 ): StyleSpecification {
   // Normalize backward compatibility: boolean true -> "dark", false -> "streets"
   const mode: MapLayerMode =
@@ -119,6 +120,7 @@ export function createGoogleMapsStyle(
         type: "raster",
         tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
         tileSize: 256,
+        maxzoom: 19,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
       },
       "satellite-raster": {
@@ -343,7 +345,7 @@ export function createGoogleMapsStyle(
         "source-layer": "building",
         minzoom: 14,
         layout: {
-          visibility: enable3D ? "visible" : "none",
+          visibility: enable3D && !enableLoD2Houses ? "visible" : "none",
         },
         paint: {
           "fill-extrusion-color": [

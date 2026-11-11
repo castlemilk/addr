@@ -1,0 +1,21 @@
+/* App shell: workspace navigation shared by the navy workspaces and the light map sidebar.
+   Owner of every .workbench-* rule (see DESIGN.md "App shell"). Dark tone consumes the
+   --review-* tokens from .review-shell; the light tone scopes the same token names to the
+   map sidebar's established light palette. Geometry and type are identical in both tones. */
+.workbench-nav { display: flex; align-items: center; gap: 2px; min-height: 52px; min-width: 0; font-family: var(--font-geist-sans), system-ui, sans-serif; }
+.workbench-wordmark { display: inline-flex; align-items: center; gap: 8px; margin-right: 14px; font-size: 15px; font-weight: 600; letter-spacing: -.02em; color: var(--review-text); white-space: nowrap; }
+.workbench-wordmark svg { color: var(--review-accent); flex: none; }
+.workbench-link { position: relative; display: inline-flex; align-items: center; min-height: 52px; padding: 0 10px; font-size: 13px; font-weight: 500; color: var(--review-muted); white-space: nowrap; text-decoration: none; }
+.workbench-link:hover { color: var(--review-text); }
+.workbench-link[aria-current="page"] { color: var(--review-text); box-shadow: inset 0 -2px var(--review-accent); }
+.workbench-link:focus-visible { outline: 2px solid var(--review-accent); outline-offset: -4px; border-radius: 6px; }
+.workbench-nav-light { --review-text: #202124; --review-muted: #5f6368; --review-accent: #0e7490; }
+.workbench-header { min-height: 52px; padding: 0 24px; gap: 16px; }
+.workbench-header .review-header-actions { gap: 12px; }
+@media (max-width: 650px) {
+  .workbench-nav { overflow-x: auto; scrollbar-width: none; }
+  .workbench-nav::-webkit-scrollbar { display: none; }
+  .workbench-header { padding: 0 12px; gap: 10px; flex-wrap: wrap; }
+  .workbench-header .review-header-actions { width: 100%; padding-bottom: 10px; }
+}
+@media (prefers-reduced-motion: no-preference) { .workbench-link { transition: color .15s; } }

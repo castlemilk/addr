@@ -1,0 +1,12 @@
+{
+  "snapshotId": "6d8811d04524eeb196c654ac3647fb32f11d14813f4ff58eb1fb5a747f238572",
+  "documents": 518,
+  "changes": 518,
+  "checkpoint": "535",
+  "firstProjectCursor": "18",
+  "lastProjectCursor": "535",
+  "allDocumentsExactlyMatchPristinePlan": true,
+  "allEventsCreateAtRevision1": true,
+  "independentHistoryReplayMatchesState": true,
+  "scope": "Fresh production API pull captured before editing imported Mooroolbark documents; existing project history is outside this project."
+}

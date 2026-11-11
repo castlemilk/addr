@@ -201,3 +201,52 @@ def test_persist_mbtiles_write_through(tmp_path, monkeypatch):
     stored = read_mbtiles_tile(persist_path, 16, 100, 200)
     assert stored == b"mvt-payload"
     assert coordinator.persisted == 1
+
+
+def _drain_prefetch(coordinator, calls, settle_s=1.0, max_s=15.0):
+    """Wait until the prefetch queue is empty and no new tile has been generated for settle_s."""
+    started = time.time()
+    last = (-1, time.time())
+    while time.time() - started < max_s:
+        n = len(calls)
+        if n != last[0]:
+            last = (n, time.time())
+        elif coordinator._queue.qsize() == 0 and time.time() - last[1] >= settle_s:
+            return
+        time.sleep(0.05)
+
+
+def test_prefetch_stops_after_one_ring(tmp_path, monkeypatch):
+    """A client-requested tile prefetches its eight neighbours; prefetched tiles never enqueue their own neighbours
+    (the old behaviour crawled outward without bound and evicted its own work from the cache)."""
+    calls = []
+
+    def fake_generate(cfg, ctx, z, x, y):
+        calls.append((z, x, y))
+        return b"payload"
+
+    monkeypatch.setattr("scripts.ml.server.generate_tile_mvt", fake_generate)
+    monkeypatch.setattr(GenerationCoordinator, "context", lambda self: None)
+    coordinator = GenerationCoordinator(make_config(tmp_path), concurrency=2, prefetch=True, prefetch_workers=2)
+    assert coordinator.get_tile(16, 100, 200) is not None
+    _drain_prefetch(coordinator, calls)
+    assert len(calls) == 9, calls
+    assert all(abs(x - 100) <= 1 and abs(y - 200) <= 1 for _, x, y in calls), calls
+    coordinator.close()
+
+
+def test_prefetch_skips_neighbours_of_empty_tile(tmp_path, monkeypatch):
+    """A requested tile with no content (no imagery or no detections) does not fan out into eight more empty tiles."""
+    calls = []
+
+    def fake_generate(cfg, ctx, z, x, y):
+        calls.append((z, x, y))
+        return b""
+
+    monkeypatch.setattr("scripts.ml.server.generate_tile_mvt", fake_generate)
+    monkeypatch.setattr(GenerationCoordinator, "context", lambda self: None)
+    coordinator = GenerationCoordinator(make_config(tmp_path), concurrency=1, prefetch=True, prefetch_workers=1)
+    coordinator.get_tile(16, 100, 200)
+    _drain_prefetch(coordinator, calls, settle_s=0.5, max_s=5.0)
+    assert calls == [(16, 100, 200)], calls
+    coordinator.close()

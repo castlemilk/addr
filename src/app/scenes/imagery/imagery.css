@@ -1,0 +1,49 @@
+/* Imagery dates (TemporalWorkspace). Consumes the --review-* tokens from reviews.css, which the
+   imagery page imports, and the app shell header from shell.css. Outline stroke colours in the
+   SVG are data encodings and live in the component, not here. */
+.temporal-workspace { font-family: var(--font-geist-sans), system-ui, sans-serif; }
+/* Keep the 52px shell row whichever of reviews.css/shell.css the route chunk emits last (see training.css). */
+.temporal-workspace .review-header { min-height: 52px; padding: 0 24px; gap: 0 16px; flex-wrap: wrap; }
+.temporal-workspace .review-header .review-header-actions { min-height: 52px; padding-bottom: 0; }
+@media (max-width: 650px) { .temporal-workspace .review-header { padding: 0 12px; gap: 0 10px; } }
+.temporal-content { max-width: 1240px; margin: 0 auto; padding: 28px 28px 40px; }
+.temporal-heading { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin: 0 0 12px; }
+.temporal-heading h1 { font-size: clamp(20px, 2vw, 28px); line-height: 1.25; font-weight: 600; letter-spacing: -.025em; margin: 0 0 6px; overflow-wrap: anywhere; }
+.temporal-heading p, .temporal-note { color: var(--review-muted); font-size: 13px; line-height: 1.6; }
+.temporal-note { max-width: 850px; }
+.temporal-progress { padding: 16px; background: var(--review-surface); border: 1px solid var(--review-line); border-radius: 8px; margin: 20px 0; font-size: 13px; }
+.temporal-progress span, .temporal-progress p { display: block; margin-top: 6px; font-size: 12px; color: var(--review-muted); font-variant-numeric: tabular-nums; }
+.temporal-progress .temporal-stale { color: var(--review-warning, #f4cc89); }
+.temporal-progress progress { display: block; width: 100%; height: 7px; margin: 12px 0; accent-color: var(--review-accent); }
+.temporal-grid { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 22px; }
+.temporal-grid aside { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.temporal-grid aside h2 { margin-bottom: 4px; }
+.temporal-grid aside button { text-align: left; padding: 10px 12px; border: 1px solid var(--review-line); border-radius: 6px; background: var(--review-surface); color: var(--review-text); font-size: 13px; font-weight: 500; }
+.temporal-grid aside button:hover:not(:disabled) { background: var(--review-raised); border-color: var(--review-line-hover, #53718d); }
+.temporal-grid aside button[aria-pressed=true] { border-color: var(--review-accent); box-shadow: inset 2px 0 var(--review-accent); }
+.temporal-grid small { display: block; color: var(--review-muted); font-size: 11px; font-weight: 400; margin-top: 4px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.temporal-grid aside p, .temporal-canvas .temporal-caption { color: var(--review-muted); font-size: 12px; line-height: 1.6; }
+.temporal-grid aside a { display: inline-flex; align-items: center; gap: 4px; width: fit-content; color: var(--review-accent); font-size: 12px; text-decoration: underline; text-underline-offset: 3px; }
+.temporal-canvas { min-width: 0; }
+.temporal-tools { display: flex; align-items: center; gap: 16px; padding: 10px 12px; flex-wrap: wrap; background: var(--review-surface); border: 1px solid var(--review-line); border-bottom: 0; border-radius: 8px 8px 0 0; font-size: 12px; }
+.review-shell .temporal-tools label { display: flex; align-items: center; gap: 8px; margin: 0; font-weight: 500; }
+.review-shell .temporal-tools select { width: auto; min-height: 32px; padding: 5px 8px; }
+.temporal-tools button { min-height: 32px; padding: 5px 10px; border: 1px solid var(--review-line); border-radius: 6px; background: var(--review-bg); color: var(--review-text); font-size: 12px; font-weight: 500; }
+.temporal-tools button:hover:not(:disabled) { background: var(--review-raised); }
+.temporal-tools button[aria-pressed=true] { border-color: var(--review-accent); color: var(--review-accent); }
+.temporal-canvas svg { display: block; width: 100%; max-height: 75vh; background: var(--review-bg); border: 1px solid var(--review-line); border-radius: 0 0 8px 8px; }
+.temporal-three { height: 65vh; position: relative; border: 1px solid var(--review-line); border-radius: 0 0 8px 8px; overflow: hidden; }
+.temporal-canvas .temporal-caption { margin-top: 10px; }
+.temporal-results { margin-top: 28px; overflow-x: auto; }
+.temporal-results > p { color: var(--review-muted); font-size: 12px; line-height: 1.6; margin: 6px 0 12px; max-width: 850px; }
+.temporal-results table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.temporal-results th, .temporal-results td { text-align: left; border-bottom: 1px solid var(--review-line); padding: 12px; vertical-align: top; }
+.temporal-results th { color: var(--review-muted); font-weight: 500; font-size: 11px; }
+.temporal-results td button { color: var(--review-accent); text-decoration: underline; text-underline-offset: 3px; text-align: left; }
+@media (max-width: 760px) {
+  .temporal-content { padding: 20px 12px 24px; }
+  .temporal-grid { grid-template-columns: 1fr; }
+  .temporal-grid aside { display: grid; grid-template-columns: 1fr 1fr; }
+  .temporal-grid aside h2, .temporal-grid aside p, .temporal-grid aside a { grid-column: 1 / -1; }
+  .temporal-heading { align-items: flex-start; flex-direction: column; }
+}

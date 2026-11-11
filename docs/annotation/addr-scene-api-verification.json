@@ -1,0 +1,18 @@
+{
+  "revision": 3,
+  "object": "2356141b48e64358",
+  "explicitEmptyNote": true,
+  "roofPartsPreserved": 8,
+  "roofLinesPreserved": 12,
+  "roofAnnotationPreserved": true,
+  "sourceUnchanged": "bb6756a052ca581d7242aeaee61cb8eef08c736252f7eb3ff4c69f20e1fb8856",
+  "scope": "isolated local clone adapter-proof-scene on 127.0.0.1:8097",
+  "apiNoteVisibleInBrowser": true,
+  "browserClearSavedToAPI": true,
+  "rejectedUnsupportedMutations": [
+    "top-level annotation.notes",
+    "DeleteAnnotation",
+    "source labelId replacement"
+  ],
+  "productionSourceModified": false
+}

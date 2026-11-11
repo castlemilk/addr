@@ -78,6 +78,55 @@ def merge_footprints(
     return merged
 
 
+def _footprint_quality(footprint: LocalFootprint) -> tuple[bool, float]:
+    eave = footprint.eave_height
+    ridge = footprint.ridge_height
+    has_structure = (
+        eave is not None and ridge is not None and (ridge - eave) > 0.5
+    ) or (footprint.roof_type not in (None, "", "flat"))
+    return (bool(has_structure), float(footprint.geometry.area))
+
+
+def dedupe_footprints(
+    footprints: list[LocalFootprint],
+    iou_threshold: float = 0.3,
+    containment_ratio: float = 0.8,
+) -> list[LocalFootprint]:
+    """Removes duplicate/nested footprints, preferring structured roofs then size.
+
+    Detectors occasionally emit the same building twice (base detection plus a
+    SAM3 addition) or a nested fragment; overlapping near-copies render as
+    jittery double roofs and inflate address matches.
+    """
+    ordered = sorted(footprints, key=_footprint_quality, reverse=True)
+    kept: list[LocalFootprint] = []
+    for candidate in ordered:
+        geometry = candidate.geometry
+        if geometry.is_empty or geometry.area <= 0:
+            continue
+        duplicate = False
+        for existing in kept:
+            other = existing.geometry
+            if geometry.bounds[2] < other.bounds[0] or geometry.bounds[0] > other.bounds[2]:
+                continue
+            if geometry.bounds[3] < other.bounds[1] or geometry.bounds[1] > other.bounds[3]:
+                continue
+            if not geometry.intersects(other):
+                continue
+            intersection = geometry.intersection(other).area
+            if intersection <= 0:
+                continue
+            union = geometry.union(other).area
+            iou = intersection / union if union > 0 else 0.0
+            contained = intersection / geometry.area
+            if iou > iou_threshold or contained > containment_ratio:
+                duplicate = True
+                break
+        if not duplicate:
+            kept.append(candidate)
+    return kept
+
+
 def footprint_properties(footprint: LocalFootprint) -> dict:
     properties: dict = {"source": footprint.source}
     if footprint.kind:

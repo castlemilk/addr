@@ -1,0 +1,21 @@
+{
+  "_comment": "What --smoke sets (train.SMOKE): CPU, random init, 20 train images, 2 steps, 384 px crops. Proves the loop, the checkpoint/resume path and the evaluation run; it says nothing about quality.",
+  "max_train_images": 20,
+  "max_steps": 2,
+  "batch_size": 2,
+  "crop": 384,
+  "pretrained": "none",
+  "device": "cpu",
+  "workers": 0,
+  "val_images": 2,
+  "test_images": 2,
+  "eval_every_steps": 0,
+  "eval_every_minutes": 0,
+  "max_minutes": 20,
+  "reserve_minutes": 5,
+  "warmup_steps": 1,
+  "log_every": 1,
+  "schedule": "steps",
+  "amp": "none",
+  "detections_per_img": 50
+}

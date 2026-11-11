@@ -1,0 +1,25 @@
+{
+  "checkedAt": "2026-09-27T03:56:52Z",
+  "projects": [
+    {
+      "id": "example-fieldwork",
+      "labels": 1,
+      "items": 2,
+      "currentDocumentsUnchanged": true
+    },
+    {
+      "id": "project",
+      "labels": 0,
+      "items": 0,
+      "currentDocumentsUnchanged": true
+    },
+    {
+      "id": "project2",
+      "labels": 0,
+      "items": 0,
+      "currentDocumentsUnchanged": true
+    }
+  ],
+  "allExistingProjectsUnchanged": true,
+  "note": "Explicitly owned sync-test item and label were deleted; their audit history is retained."
+}

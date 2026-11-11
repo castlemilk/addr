@@ -1,0 +1,23 @@
+{
+  "manifest": {
+    "bytes": 4886154,
+    "contentType": "application/json",
+    "sha256": "792af412c54098a734d547280eb3d16c20d8a56b6097ecbac1dea33e9b62f0e4",
+    "url": "/api/v1/assets/792af412c54098a734d547280eb3d16c20d8a56b6097ecbac1dea33e9b62f0e4"
+  },
+  "projectId": "mooroolbark",
+  "snapshotId": "6d8811d04524eeb196c654ac3647fb32f11d14813f4ff58eb1fb5a747f238572",
+  "stats": {
+    "aggregateItemBytes": 49117426,
+    "annotations": 43316,
+    "files": 14330,
+    "items": 507,
+    "labels": 10,
+    "maxSceneDocumentBytes": 207679,
+    "originalBytes": 5618694792,
+    "sceneReviews": 143,
+    "scenes": 506,
+    "uniqueBlobBytes": 3725222450,
+    "uniqueBlobs": 10026
+  }
+}

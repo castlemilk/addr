@@ -68,6 +68,13 @@ class Sam3TextSegmenter:
         )
         self.decoder_inputs = {spec.name for spec in self.decoder.get_inputs()}
 
+        # Bind parcel-scoped observations to the actual active export, including
+        # its tokenizer and input configuration. File contents, not filenames,
+        # determine whether these observations can be reused.
+        from .scene_experiment import digest
+        self.model_identity = {p.name: digest(p) for p in (vision_path, text_path, decoder_path, tokenizer_path)}
+        self.model_identity['input_size'] = input_size
+
         self.tokenizer = Tokenizer.from_file(str(tokenizer_path))
         self.tokenizer.enable_truncation(max_length=MAX_TOKENS)
         self.tokenizer.enable_padding(length=MAX_TOKENS, pad_id=0)

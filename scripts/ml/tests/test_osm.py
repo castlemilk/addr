@@ -94,3 +94,21 @@ def test_merge_keeps_unmatched_ml_and_osm():
     assert len(merged) == 2
     sources = {footprint.source for footprint in merged}
     assert sources == {"ml", "osm"}
+
+
+def test_dedupe_footprints_prefers_structured_and_removes_nested():
+    from scripts.ml.footprints import LocalFootprint, dedupe_footprints
+    from shapely.geometry import box
+
+    big_flat = LocalFootprint(geometry=box(0, 0, 10, 10), source="ml", roof_type="flat")
+    big_hipped = LocalFootprint(
+        geometry=box(0, 0, 10, 10), source="ml", roof_type="hipped", eave_height=3.0, ridge_height=6.0
+    )
+    nested = LocalFootprint(geometry=box(1, 1, 4, 4), source="ml", roof_type="flat")
+    smaller = LocalFootprint(geometry=box(0.5, 0.5, 8, 8), source="ml", roof_type="flat")
+    separate = LocalFootprint(geometry=box(30, 30, 40, 40), source="ml", roof_type="flat")
+
+    kept = dedupe_footprints([big_flat, big_hipped, nested, smaller, separate])
+    assert len(kept) == 2
+    assert big_hipped in kept
+    assert separate in kept

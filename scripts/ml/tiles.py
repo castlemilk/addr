@@ -265,6 +265,15 @@ def encode_mvt_layer(
     return bytes(layer)
 
 
+def wgs84_to_mvt_local(lon: float, lat: float, x: int, y: int, z: int) -> tuple[float, float]:
+    """WGS84 -> MVT's native y-down encoder coordinates.
+
+    Decode with ``y_coord_down=True`` when converting back to WGS84. The
+    decoder's default Cartesian y-up output is not a slippy-map coordinate.
+    """
+    return lonlat_to_tile_local(lon, lat, x, y, z)
+
+
 def encode_mvt_tile(
     layers: dict[str, list[MVTFeature]], extent: int = TILE_EXTENT
 ) -> bytes:

@@ -1,0 +1,24 @@
+{
+  "snapshotId": "6d8811d04524eeb196c654ac3647fb32f11d14813f4ff58eb1fb5a747f238572",
+  "itemId": "addr-scene-house-30296",
+  "objectId": "2356141b48e64358",
+  "browserViewport": [
+    390,
+    844
+  ],
+  "savedRevision": 2,
+  "readThrough": "Go annotate CLI / REST",
+  "all90AnnotationGeometriesUnchanged": true,
+  "sourceBindingsMetadataTagsAndStatusUnchanged": true,
+  "onlyObjectOverride": "notes",
+  "noRemovedSourceFields": true,
+  "unchangedOtherObjects": 89,
+  "fullBrowserReloadRetainedNotes": true,
+  "mobileDocumentOverflow": false,
+  "desktopReportRoofCount": 10339,
+  "lowEvidenceFilterCount": 1892,
+  "highEvidenceFilterCount": 31,
+  "sourceArchiveFiles": 14330,
+  "historicalReviewInspection": true,
+  "roofLineAnd3DRendering": true
+}

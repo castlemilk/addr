@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Address reviews MCP protocol test host</title>
+  <style>
+    body { margin: 0; font: 14px system-ui, sans-serif; background: #f4f4f4; color: #222; }
+    header { padding: 12px 18px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; border-bottom: 1px solid #ddd; }
+    button { font: inherit; padding: 6px 10px; }
+    iframe { display: block; width: 100%; height: 650px; border: 0; background: white; }
+    pre { margin: 0; padding: 16px; font: 12px/1.5 monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+  <header>
+    <strong>Development test host</strong>
+    <button id="theme" type="button">Toggle theme</button>
+    <button id="deep-link" type="button">Open scene deep link</button>
+    <button id="clear" type="button">Remove chat attachments</button>
+    <button id="empty" type="button">Show empty results</button>
+    <button id="fail-read" type="button">Fail next detail read</button>
+    <button id="delay-read" type="button">Delay address reads</button>
+    <span>Search “empty” or “error” to exercise result states.</span>
+  </header>
+  <iframe id="app" title="Address reviews" src="../../scripts/ml/mcp_app.html" sandbox="allow-scripts allow-same-origin"></iframe>
+  <pre id="protocol-log" aria-label="Protocol log"></pre>
+  <script>
+    const frame = document.getElementById("app");
+    const log = document.getElementById("protocol-log");
+    const options = new URLSearchParams(location.search);
+    const standardOnly = options.get("capabilities") === "standard";
+    const noComposer = options.get("capabilities") === "none";
+    let theme = "light";
+    let updateId = 0;
+    let failNextRead = false;
+    let delayAddressRead = false;
+    const requests = [];
+    const items = [
+      { type: "resource_link", uri: "addr://addresses/29790", name: "29790", title: "27 Cambridge Road, Mooroolbark VIC 3138", mimeType: "application/json", description: "Address 29790 · gabled roof · 184.2 m²" },
+      { type: "resource_link", uri: "addr://addresses/25007", name: "25007", title: "3 Kiloran Avenue, Kilsyth VIC 3137", mimeType: "application/json", description: "Address 25007 · units · 568.4 m²" },
+      { type: "resource_link", uri: "addr://scenes/demo_scene", name: "demo_scene", title: "Cambridge Road scene", mimeType: "application/json", description: "Saved scene · 4 objects" },
+    ];
+    const observations = [];
+    let noteAttempt = 0;
+    function roofImage() {
+      const canvas = document.createElement("canvas");
+      canvas.width = 900;
+      canvas.height = 330;
+      const context = canvas.getContext("2d");
+      for (let panel = 0; panel < 3; panel++) {
+        const left = panel * 300;
+        context.fillStyle = "#dde4de";
+        context.fillRect(left, 0, 300, 330);
+        context.fillStyle = "#526f52";
+        context.fillRect(left + 20, 80, 260, 240);
+        context.fillStyle = "#b58568";
+        context.fillRect(left + 65, 110, 180, 145);
+        context.fillStyle = "#1e3328";
+        context.font = "17px sans-serif";
+        context.fillText(["Synthetic original", "Model estimate", "Detected segments"][panel], left + 18, 30);
+        if (panel > 0) {
+          context.strokeStyle = panel === 1 ? "#72efff" : "#ffd34f";
+          context.lineWidth = 3;
+          context.strokeRect(left + 65, 110, 180, 145);
+          context.beginPath();
+          context.moveTo(left + 90, 182);
+          context.lineTo(left + 220, 182);
+          context.stroke();
+        }
+      }
+      return canvas.toDataURL("image/png").split(",")[1];
+    }
+    function toolResult(payload, image) {
+      return { content: [{ type: "text", text: JSON.stringify(payload) }, ...(image ? [{ type: "image", mimeType: "image/png", data: image }] : [])],
+        ...(!options.get("legacy") ? { structuredContent: payload } : {}) };
+    }
+    function send(message) { frame.contentWindow.postMessage({ jsonrpc: "2.0", ...message }, "*"); }
+    function notify(method, params) { send({ method, params }); }
+    function result(id, value) { send({ id, result: value }); }
+    function listResult(values) { return { content: [{ type: "text", text: JSON.stringify({ title: "Address reviews", items: values }) }], structuredContent: { title: "Address reviews", items: values } }; }
+    function renderLog() { log.textContent = JSON.stringify(requests, null, 2); }
+    window.addEventListener("message", (event) => {
+      if (event.source !== frame.contentWindow || event.data?.jsonrpc !== "2.0") return;
+      const message = event.data;
+      if (message.method === "ui/notifications/size-changed") {
+        frame.style.height = `${Math.max(460, message.params.height)}px`;
+        return;
+      }
+      if (message.method === "ui/notifications/initialized") {
+        notify("ui/notifications/tool-result", listResult(items));
+        return;
+      }
+      if (!message.method || message.id == null) return;
+      requests.push({ method: message.method, params: message.params });
+      renderLog();
+      if (message.method === "ui/initialize") {
+        result(message.id, {
+          protocolVersion: message.params.protocolVersion,
+          hostInfo: { name: "addr test host", version: "1.0.0" },
+          hostCapabilities: {
+            serverTools: {}, serverResources: {}, openLinks: {},
+            ...(!noComposer ? { updateModelContext: { resourceLink: {} } } : {}),
+            ...(!noComposer && !standardOnly ? { experimental: { "openai/modelContext": {} } } : {}),
+          },
+          hostContext: { theme, ...(options.get("deeplink") ? { "openai/deepLink": { url: "/scenes/demo_scene" } } : {}) },
+        });
+      } else if (message.method === "tools/call") {
+        const name = message.params.name;
+        const args = message.params.arguments;
+        if (name === "app_search_resources") {
+          const query = String(args.query).toLowerCase();
+          if (query === "error") result(message.id, { isError: true, content: [{ type: "text", text: "Test server unavailable" }] });
+          else result(message.id, listResult(query === "empty" ? [] : items.filter((item) => `${item.title} ${item.name}`.toLowerCase().includes(query))));
+        } else if (name === "low_confidence_roofs") {
+          result(message.id, toolResult({ selection: "Synthetic training-frame detector roofs; no real review data is used.", rows: [
+            { scene_id: "demo_scene", object_id: "roof_1", capture_title: "Cambridge Road scene", area_m2: 184.2, reasons: ["Image-line mismatch", "Uncertain roof family"] },
+            { scene_id: "demo_scene", object_id: "roof_2", capture_title: "Cambridge Road scene", area_m2: 61.8, reasons: ["Canopy obscures eaves"] },
+          ] }));
+        } else if (name === "scene_roof_review") {
+          if (args.scene_id !== "demo_scene" || !["roof_1", "roof_2"].includes(args.object_id) || args.include_source !== false || args.include_feedback !== true) {
+            result(message.id, { isError: true, content: [{ type: "text", text: "Unexpected synthetic roof request" }] });
+            return;
+          }
+          const reviewId = (args.object_id === "roof_1" ? "a" : "b").repeat(64);
+          const packet = { review_id: reviewId, identity: { scene_id: "demo_scene", object_id: args.object_id },
+            model_roof_type: args.object_id === "roof_1" ? "gabled" : "hipped", editor_url: `http://example.test/scenes?scene=demo_scene&object=${args.object_id}`,
+            eyes_status: { rows: 2, note: "Synthetic cached diagnostics; no accuracy claim." },
+            eyes: { roof_diagnostics: [{ binding: "current_model", form_uncertain: true, topology: { n_faces: 5 } }], shadow_bands: [{ binding: "stale_model", band_v2: "low", reasons_v2: ["Tree shadow"] }] },
+            saved_feedback: { state: "available", data: { revision: 7, stale: false, objects: [{ object_id: args.object_id, feedback_status: "draft", training_eligible: false }] } },
+            observations: observations.filter((note) => note.review_id === reviewId) };
+          const response = toolResult(packet, roofImage());
+          if (options.get("delay-roof") && args.object_id === "roof_1") setTimeout(() => result(message.id, response), 800);
+          else result(message.id, response);
+        } else if (name === "record_roof_observation") {
+          if (options.get("fail-note") && !noteAttempt++) {
+            result(message.id, { isError: true, content: [{ type: "text", text: "Source model changed; inspect a fresh roof review." }] });
+            return;
+          }
+          const note = { ...args, observation_id: `note-${observations.length + 1}`, recorded_at: "2026-09-30T12:00:00Z", tier: 3, human_approval: false, training_eligible: false };
+          observations.push(note);
+          result(message.id, toolResult({ observation_id: note.observation_id, review_id: args.review_id, observation: note }));
+        } else result(message.id, { isError: true, content: [{ type: "text", text: "Unexpected test tool" }] });
+      } else if (message.method === "resources/read") {
+        const uri = message.params.uri;
+        if (failNextRead) {
+          failNextRead = false;
+          send({ id: message.id, error: { code: -32603, message: "Test resource temporarily unavailable" } });
+          return;
+        }
+        const data = uri.includes("/scenes/") ? {
+          model: { id: "demo_scene", title: "Cambridge Road scene", image_width: 1024, image_height: 768, objects: [{ id: "roof_1", kind: "building", label: "Primary roof" }, { id: "roof_2", kind: "building", label: "Secondary roof" }, { id: "tree_1", kind: "tree" }, { id: "solar_1", kind: "solar" }] },
+          provenance: "Model estimate; review metadata remains separate",
+        } : {
+          record: { address_id: Number(uri.split("/").pop()), full_address: items.find((item) => item.uri === uri)?.title, kind: "house", roof_type: "gabled", area_m2: 184.2, eave_height: 2.8, ridge_height: 5.1 },
+          provenance: "Model estimate; review metadata remains separate",
+        };
+        const response = { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(data) }] };
+        if (delayAddressRead && uri.includes("/addresses/")) setTimeout(() => result(message.id, response), 800);
+        else result(message.id, response);
+      } else if (message.method === "ui/update-model-context") {
+        updateId++;
+        result(message.id, standardOnly ? {} : { _meta: { "openai/modelContext": { updateId: `update-${updateId}` } } });
+        if (!standardOnly) notify("ui/notifications/host-context-changed", { "openai/modelContext": { content: message.params.content, updateId: `update-${updateId}` } });
+      } else if (message.method === "ui/open-link") {
+        result(message.id, {});
+      } else {
+        send({ id: message.id, error: { code: -32601, message: "Unexpected test method" } });
+      }
+    });
+    document.getElementById("theme").addEventListener("click", () => {
+      theme = theme === "light" ? "dark" : "light";
+      notify("ui/notifications/host-context-changed", { theme });
+    });
+    document.getElementById("deep-link").addEventListener("click", () => notify("ui/notifications/host-context-changed", { "openai/deepLink": { url: "/scenes/demo_scene?object=roof_2" } }));
+    document.getElementById("clear").addEventListener("click", () => notify("ui/notifications/host-context-changed", { "openai/modelContext": null }));
+    document.getElementById("empty").addEventListener("click", () => notify("ui/notifications/tool-result", listResult([])));
+    document.getElementById("fail-read").addEventListener("click", () => { failNextRead = true; });
+    document.getElementById("delay-read").addEventListener("click", () => { delayAddressRead = true; });
+  </script>
+</body>
+</html>

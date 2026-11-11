@@ -1,0 +1,66 @@
+{
+  "checkedAt": "2026-09-27T05:12:20Z",
+  "workerVersion": "eb12acbb-bb33-4a0e-9f53-d86f42381243",
+  "containerVersion": 7,
+  "containerImage": "sha256:1bc1e77fb22002fba106cb4bb36e800f828b3448850fbc41e5c4b59ece415c3a",
+  "uiBundle": "index-C_l181Xb.js",
+  "readChecks": [
+    {
+      "path": "/readyz",
+      "httpStatus": 200,
+      "curlExit": 0,
+      "seconds": 0.438
+    },
+    {
+      "path": "/",
+      "httpStatus": 200,
+      "curlExit": 0,
+      "seconds": 0.285
+    },
+    {
+      "path": "/api/v1/rpc/GetInfo",
+      "httpStatus": 200,
+      "curlExit": 0,
+      "seconds": 0.34
+    },
+    {
+      "path": "/api/v1/rpc/ListChanges",
+      "httpStatus": 200,
+      "curlExit": 0,
+      "seconds": 0.438
+    },
+    {
+      "path": "/mcp",
+      "httpStatus": 200,
+      "curlExit": 0,
+      "seconds": 0.448
+    },
+    {
+      "path": "/mcp",
+      "httpStatus": 200,
+      "curlExit": 0,
+      "seconds": 0.523
+    }
+  ],
+  "mcpGetInfoPassed": true,
+  "mcpToolCount": 14,
+  "mcpTools": [
+    "delete_annotation",
+    "delete_item",
+    "delete_label",
+    "export_project",
+    "get_info",
+    "get_item",
+    "list_changes",
+    "list_items",
+    "list_labels",
+    "list_projects",
+    "save_annotation",
+    "save_item",
+    "save_label",
+    "save_project"
+  ],
+  "projectChangesAfter535": 0,
+  "projectCursor": "535",
+  "dataUnchangedAfterRepeatImport": true
+}

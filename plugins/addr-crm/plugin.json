@@ -1,0 +1,24 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "addr-crm",
+  "version": "0.1.2",
+  "description": "Browse the hosted addr Fieldwork workspace, inspect original imagery and save independent agent reviews alongside human decisions with revision-checked MCP tools.",
+  "author": { "name": "Ben Ebsworth" },
+  "homepage": "https://fieldwork-annotations.ben-ebsworth.workers.dev",
+  "keywords": ["addr", "fieldwork", "annotation", "roof-review"],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Addr CRM",
+        "shortDescription": "Review addr scene objects",
+        "longDescription": "Connect to the hosted addr Fieldwork workspace. Browse projects, find items by title, inspect saved annotations and original images, and update feedback with current revision checks. The MCP workspace supports project and item mentions. Authorize the connection through OAuth; read access and optional editing are authorized separately. Backend credentials stay on the server.",
+        "developerName": "Ben Ebsworth",
+        "category": "Productivity",
+        "capabilities": ["Interactive"],
+        "logo": "./assets/addr.svg",
+        "composerIcon": "./assets/addr.svg",
+        "defaultPrompt": ["Open my addr CRM workspace.", "Review low confidence objects in mooroolbark and show proposed edits."]
+      }
+    }
+  }
+}

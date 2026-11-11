@@ -1,0 +1,1190 @@
+{
+  "dataset_signature": "392a7a036bdf3258ca8d31a99eceee65b2cbb2037eb4ac50f581654a7fe31ed0",
+  "source": {
+    "name": "Vicmap Property Address",
+    "url": "https://services-ap1.arcgis.com/P744lA0wf4LlBZ84/arcgis/rest/services/Vicmap_Property_Address/FeatureServer/0",
+    "attribution": "State of Victoria",
+    "license": "CC BY 4.0"
+  },
+  "fetched_at": "2026-09-25T05:55:30.616227+00:00",
+  "bounds": [
+    145.29516860221526,
+    -37.80572512371624,
+    145.35650209536539,
+    -37.7554254638734
+  ],
+  "cases": [
+    {
+      "scene": "house-29406",
+      "object": "f36bbc9068ef98a7",
+      "roof": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              145.31243539313476,
+              -37.78857029263697
+            ],
+            [
+              145.3123398845371,
+              -37.788614486988884
+            ],
+            [
+              145.31238785531053,
+              -37.78867921028241
+            ],
+            [
+              145.3124048557832,
+              -37.788677271435645
+            ],
+            [
+              145.3124319872676,
+              -37.78871388141542
+            ],
+            [
+              145.3125137569433,
+              -37.78867603969772
+            ],
+            [
+              145.31243539313476,
+              -37.78857029263697
+            ]
+          ]
+        ]
+      },
+      "expected": "matched",
+      "features": [
+        {
+          "type": "Feature",
+          "id": 176838,
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  145.312272154926,
+                  -37.7886613260935
+                ],
+                [
+                  145.31218039202,
+                  -37.7885445730071
+                ],
+                [
+                  145.312073435009,
+                  -37.7885975201216
+                ],
+                [
+                  145.312027011872,
+                  -37.7885386487379
+                ],
+                [
+                  145.312320352236,
+                  -37.7883929222145
+                ],
+                [
+                  145.312340071155,
+                  -37.7884179049997
+                ],
+                [
+                  145.312367636858,
+                  -37.7884528621428
+                ],
+                [
+                  145.312257888781,
+                  -37.7885073370682
+                ],
+                [
+                  145.312349201632,
+                  -37.7886232986552
+                ],
+                [
+                  145.312440164139,
+                  -37.7887388142328
+                ],
+                [
+                  145.31255191456,
+                  -37.7888807271198
+                ],
+                [
+                  145.312474730413,
+                  -37.788919066788
+                ],
+                [
+                  145.312362297272,
+                  -37.7887760181088
+                ],
+                [
+                  145.312272154926,
+                  -37.7886613260935
+                ]
+              ]
+            ]
+          },
+          "properties": {
+            "OBJECTID": 176838,
+            "prop_pfi": "202210827",
+            "prop_status": "A",
+            "propv_z_level": "G",
+            "add_pfi": "202210828",
+            "add_property_pfi": "202210827",
+            "add_ezi_address": "208 HULL ROAD MOOROOLBARK 3138",
+            "add_is_primary": "Y",
+            "add_source_verified": 1260316800000,
+            "add_blg_unit_type": null,
+            "add_blg_unit_id_1": null,
+            "add_blg_unit_id_2": null,
+            "add_floor_type": null,
+            "add_floor_no_1": null,
+            "add_floor_no_2": null,
+            "add_building_name": null,
+            "add_complex_name": null,
+            "add_complex_site": "N",
+            "add_num_road_address": "208 HULL ROAD",
+            "add_locality_name": "MOOROOLBARK",
+            "add_postcode": "3138"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": 696835,
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  145.312661952793,
+                  -37.7888260707312
+                ],
+                [
+                  145.31255191456,
+                  -37.7888807271198
+                ],
+                [
+                  145.312474730413,
+                  -37.788919066788
+                ],
+                [
+                  145.312368599852,
+                  -37.7889717736832
+                ],
+                [
+                  145.312295724923,
+                  -37.7888793718917
+                ],
+                [
+                  145.312255785825,
+                  -37.7888287371745
+                ],
+                [
+                  145.312235243151,
+                  -37.7888026861048
+                ],
+                [
+                  145.312182643198,
+                  -37.7887359887649
+                ],
+                [
+                  145.312164384042,
+                  -37.7887128369627
+                ],
+                [
+                  145.312130193264,
+                  -37.7886694837524
+                ],
+                [
+                  145.312076599774,
+                  -37.7886015297377
+                ],
+                [
+                  145.312073435009,
+                  -37.7885975201216
+                ],
+                [
+                  145.312027011872,
+                  -37.7885386487379
+                ],
+                [
+                  145.312320352236,
+                  -37.7883929222145
+                ],
+                [
+                  145.312340071155,
+                  -37.7884179049997
+                ],
+                [
+                  145.312367636858,
+                  -37.7884528621428
+                ],
+                [
+                  145.312457942697,
+                  -37.7885673762922
+                ],
+                [
+                  145.312550117032,
+                  -37.7886842606772
+                ],
+                [
+                  145.312560260808,
+                  -37.7886971229532
+                ],
+                [
+                  145.312661952793,
+                  -37.7888260707312
+                ]
+              ]
+            ]
+          },
+          "properties": {
+            "OBJECTID": 696835,
+            "prop_pfi": "202210831",
+            "prop_status": "A",
+            "propv_z_level": "G",
+            "add_pfi": "202210832",
+            "add_property_pfi": "202210831",
+            "add_ezi_address": "208 HULL ROAD MOOROOLBARK 3138",
+            "add_is_primary": "Y",
+            "add_source_verified": null,
+            "add_blg_unit_type": null,
+            "add_blg_unit_id_1": null,
+            "add_blg_unit_id_2": null,
+            "add_floor_type": null,
+            "add_floor_no_1": null,
+            "add_floor_no_2": null,
+            "add_building_name": null,
+            "add_complex_name": null,
+            "add_complex_site": "N",
+            "add_num_road_address": "208 HULL ROAD",
+            "add_locality_name": "MOOROOLBARK",
+            "add_postcode": "3138"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": 962230,
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  145.312440164139,
+                  -37.7887388142328
+                ],
+                [
+                  145.312349201632,
+                  -37.7886232986552
+                ],
+                [
+                  145.312457942697,
+                  -37.7885673762922
+                ],
+                [
+                  145.312550117032,
+                  -37.7886842606772
+                ],
+                [
+                  145.312440164139,
+                  -37.7887388142328
+                ]
+              ]
+            ]
+          },
+          "properties": {
+            "OBJECTID": 962230,
+            "prop_pfi": "202210795",
+            "prop_status": "A",
+            "propv_z_level": "G",
+            "add_pfi": "202210796",
+            "add_property_pfi": "202210795",
+            "add_ezi_address": "3/208 HULL ROAD MOOROOLBARK 3138",
+            "add_is_primary": "Y",
+            "add_source_verified": 1260316800000,
+            "add_blg_unit_type": "UNIT",
+            "add_blg_unit_id_1": 3,
+            "add_blg_unit_id_2": null,
+            "add_floor_type": null,
+            "add_floor_no_1": null,
+            "add_floor_no_2": null,
+            "add_building_name": null,
+            "add_complex_name": null,
+            "add_complex_site": "N",
+            "add_num_road_address": "3/208 HULL ROAD",
+            "add_locality_name": "MOOROOLBARK",
+            "add_postcode": "3138"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": 1071831,
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  145.312457942697,
+                  -37.7885673762922
+                ],
+                [
+                  145.312349201632,
+                  -37.7886232986552
+                ],
+                [
+                  145.312257888781,
+                  -37.7885073370682
+                ],
+                [
+                  145.312367636858,
+                  -37.7884528621428
+                ],
+                [
+                  145.312457942697,
+                  -37.7885673762922
+                ]
+              ]
+            ]
+          },
+          "properties": {
+            "OBJECTID": 1071831,
+            "prop_pfi": "202210780",
+            "prop_status": "A",
+            "propv_z_level": "G",
+            "add_pfi": "202210781",
+            "add_property_pfi": "202210780",
+            "add_ezi_address": "1/208 HULL ROAD MOOROOLBARK 3138",
+            "add_is_primary": "Y",
+            "add_source_verified": 1260316800000,
+            "add_blg_unit_type": "UNIT",
+            "add_blg_unit_id_1": 1,
+            "add_blg_unit_id_2": null,
+            "add_floor_type": null,
+            "add_floor_no_1": null,
+            "add_floor_no_2": null,
+            "add_building_name": null,
+            "add_complex_name": null,
+            "add_complex_site": "N",
+            "add_num_road_address": "1/208 HULL ROAD",
+            "add_locality_name": "MOOROOLBARK",
+            "add_postcode": "3138"
+          }
+        }
+      ]
+    },
+    {
+      "scene": "mooroolbark-50011498-17-118442-80416",
+      "object": "44f80ff4616f7d16",
+      "roof": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              145.31057163476942,
+              -37.78850080852784
+            ],
+            [
+              145.31059089303017,
+              -37.78850945686577
+            ],
+            [
+              145.31058150529861,
+              -37.788596194551936
+            ],
+            [
+              145.31059837639333,
+              -37.78860986653861
+            ],
+            [
+              145.31063917279243,
+              -37.78861092638244
+            ],
+            [
+              145.31065271794796,
+              -37.78862801106279
+            ],
+            [
+              145.31069853007796,
+              -37.788640029687926
+            ],
+            [
+              145.3107817053795,
+              -37.78864380273033
+            ],
+            [
+              145.31090186834336,
+              -37.78866287990808
+            ],
+            [
+              145.31093493998048,
+              -37.788671316258466
+            ],
+            [
+              145.31112950742244,
+              -37.78866711928025
+            ],
+            [
+              145.31114232838155,
+              -37.788572920373404
+            ],
+            [
+              145.311090695858,
+              -37.78848554675256
+            ],
+            [
+              145.31062849760053,
+              -37.788430540744656
+            ],
+            [
+              145.31059451401234,
+              -37.788426322555864
+            ],
+            [
+              145.310581612587,
+              -37.78843378387459
+            ],
+            [
+              145.31057163476942,
+              -37.78850080852784
+            ]
+          ]
+        ]
+      },
+      "expected": "shared",
+      "features": [
+        {
+          "type": "Feature",
+          "id": 262695,
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  145.311138196272,
+                  -37.7885804998384
+                ],
+                [
+                  145.311122673384,
+                  -37.7886680021552
+                ],
+                [
+                  145.311002576715,
+                  -37.7886545186965
+                ],
+                [
+                  145.311033140994,
+                  -37.7884816876993
+                ],
+                [
+                  145.311089484227,
+                  -37.788487770285
+                ],
+                [
+                  145.311138196272,
+                  -37.7885804998384
+                ]
+              ]
+            ]
+          },
+          "properties": {
+            "OBJECTID": 262695,
+            "prop_pfi": "52881847",
+            "prop_status": "A",
+            "propv_z_level": "G",
+            "add_pfi": "54549517",
+            "add_property_pfi": "52881847",
+            "add_ezi_address": "5/191-195 HULL ROAD MOOROOLBARK 3138",
+            "add_is_primary": "Y",
+            "add_source_verified": 1260316800000,
+            "add_blg_unit_type": "SHOP",
+            "add_blg_unit_id_1": 5,
+            "add_blg_unit_id_2": null,
+            "add_floor_type": null,
+            "add_floor_no_1": null,
+            "add_floor_no_2": null,
+            "add_building_name": null,
+            "add_complex_name": null,
+            "add_complex_site": "N",
+            "add_num_road_address": "5/191-195 HULL ROAD",
+            "add_locality_name": "MOOROOLBARK",
+            "add_postcode": "3138"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": 1177717,
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  145.310475225219,
+                  -37.7889716572572
+                ],
+                [
+                  145.310579215095,
+                  -37.7883878086617
+                ],
+                [
+                  145.311027717865,
+                  -37.7884381156982
+                ],
+                [
+                  145.311101847741,
+                  -37.7883642457066
+                ],
+                [
+                  145.311222732232,
+                  -37.7887133850184
+                ],
+                [
+                  145.310981187828,
+                  -37.7888328979901
+                ],
+                [
+                  145.310585579659,
+                  -37.7890286377957
+                ],
+                [
+                  145.310475225219,
+                  -37.7889716572572
+                ]
+              ]
+            ]
+          },
+          "properties": {
+            "OBJECTID": 1177717,
+            "prop_pfi": "206142282",
+            "prop_status": "A",
+            "propv_z_level": "G",
+            "add_pfi": "206142283",
+            "add_property_pfi": "206142282",
+            "add_ezi_address": "191-195 HULL ROAD MOOROOLBARK 3138",
+            "add_is_primary": "Y",
+            "add_source_verified": null,
+            "add_blg_unit_type": null,
+            "add_blg_unit_id_1": null,
+            "add_blg_unit_id_2": null,
+            "add_floor_type": null,
+            "add_floor_no_1": null,
+            "add_floor_no_2": null,
+            "add_building_name": null,
+            "add_complex_name": null,
+            "add_complex_site": "N",
+            "add_num_road_address": "191-195 HULL ROAD",
+            "add_locality_name": "MOOROOLBARK",
+            "add_postcode": "3138"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": 1687877,
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  145.310595097309,
+                  -37.7885100141718
+                ],
+                [
+                  145.310567369011,
+                  -37.7885069388037
+                ],
+                [
+                  145.310580737739,
+                  -37.7884311308008
+                ],
+                [
+                  145.310795630925,
+                  -37.7884550998084
+                ],
+                [
+                  145.310764975916,
+                  -37.7886277441593
+                ],
+                [
+                  145.310577950267,
+                  -37.7886065779633
+                ],
+                [
+                  145.310595097309,
+                  -37.7885100141718
+                ]
+              ]
+            ]
+          },
+          "properties": {
+            "OBJECTID": 1687877,
+            "prop_pfi": "52715898",
+            "prop_status": "A",
+            "propv_z_level": "G",
+            "add_pfi": "53945442",
+            "add_property_pfi": "52715898",
+            "add_ezi_address": "1/191-195 HULL ROAD MOOROOLBARK 3138",
+            "add_is_primary": "Y",
+            "add_source_verified": 1260316800000,
+            "add_blg_unit_type": "SHOP",
+            "add_blg_unit_id_1": 1,
+            "add_blg_unit_id_2": null,
+            "add_floor_type": null,
+            "add_floor_no_1": null,
+            "add_floor_no_2": null,
+            "add_building_name": null,
+            "add_complex_name": null,
+            "add_complex_site": "N",
+            "add_num_road_address": "1/191-195 HULL ROAD",
+            "add_locality_name": "MOOROOLBARK",
+            "add_postcode": "3138"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": 2777202,
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  145.310981187828,
+                  -37.7888328979901
+                ],
+                [
+                  145.310585579659,
+                  -37.7890286377957
+                ],
+                [
+                  145.310475225219,
+                  -37.7889716572572
+                ],
+                [
+                  145.310579215095,
+                  -37.7883878086617
+                ],
+                [
+                  145.311027717865,
+                  -37.7884381156982
+                ],
+                [
+                  145.311101847741,
+                  -37.7883642457066
+                ],
+                [
+                  145.311222732232,
+                  -37.7887133850184
+                ],
+                [
+                  145.310981187828,
+                  -37.7888328979901
+                ]
+              ],
+              [
+                [
+                  145.310904141123,
+                  -37.7886434652827
+                ],
+                [
+                  145.311002576715,
+                  -37.7886545186965
+                ],
+                [
+                  145.311122673384,
+                  -37.7886680021552
+                ],
+                [
+                  145.311138196272,
+                  -37.7885804998384
+                ],
+                [
+                  145.311089484227,
+                  -37.788487770285
+                ],
+                [
+                  145.311033140994,
+                  -37.7884816876993
+                ],
+                [
+                  145.310912370589,
+                  -37.7884681147568
+                ],
+                [
+                  145.310888941628,
+                  -37.7884654802469
+                ],
+                [
+                  145.310795630925,
+                  -37.7884550998084
+                ],
+                [
+                  145.310580737739,
+                  -37.7884311308008
+                ],
+                [
+                  145.310567369011,
+                  -37.7885069388037
+                ],
+                [
+                  145.310595097309,
+                  -37.7885100141718
+                ],
+                [
+                  145.310577950267,
+                  -37.7886065779633
+                ],
+                [
+                  145.310764975916,
+                  -37.7886277441593
+                ],
+                [
+                  145.310834395026,
+                  -37.7886355880384
+                ],
+                [
+                  145.310904141123,
+                  -37.7886434652827
+                ]
+              ]
+            ]
+          },
+          "properties": {
+            "OBJECTID": 2777202,
+            "prop_pfi": "52715903",
+            "prop_status": "A",
+            "propv_z_level": "G",
+            "add_pfi": "53945447",
+            "add_property_pfi": "52715903",
+            "add_ezi_address": "191-195 HULL ROAD MOOROOLBARK 3138",
+            "add_is_primary": "Y",
+            "add_source_verified": 1260316800000,
+            "add_blg_unit_type": null,
+            "add_blg_unit_id_1": null,
+            "add_blg_unit_id_2": null,
+            "add_floor_type": null,
+            "add_floor_no_1": null,
+            "add_floor_no_2": null,
+            "add_building_name": null,
+            "add_complex_name": null,
+            "add_complex_site": "N",
+            "add_num_road_address": "191-195 HULL ROAD",
+            "add_locality_name": "MOOROOLBARK",
+            "add_postcode": "3138"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": 3540193,
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  145.310926224408,
+                  -37.7885204038315
+                ],
+                [
+                  145.310903489844,
+                  -37.788517843155
+                ],
+                [
+                  145.310912370589,
+                  -37.7884681147568
+                ],
+                [
+                  145.311033140994,
+                  -37.7884816876993
+                ],
+                [
+                  145.311002576715,
+                  -37.7886545186965
+                ],
+                [
+                  145.310904141123,
+                  -37.7886434652827
+                ],
+                [
+                  145.310926224408,
+                  -37.7885204038315
+                ]
+              ]
+            ]
+          },
+          "properties": {
+            "OBJECTID": 3540193,
+            "prop_pfi": "52881846",
+            "prop_status": "A",
+            "propv_z_level": "G",
+            "add_pfi": "54549516",
+            "add_property_pfi": "52881846",
+            "add_ezi_address": "4/191-195 HULL ROAD MOOROOLBARK 3138",
+            "add_is_primary": "Y",
+            "add_source_verified": 1260316800000,
+            "add_blg_unit_type": "SHOP",
+            "add_blg_unit_id_1": 4,
+            "add_blg_unit_id_2": null,
+            "add_floor_type": null,
+            "add_floor_no_1": null,
+            "add_floor_no_2": null,
+            "add_building_name": null,
+            "add_complex_name": null,
+            "add_complex_site": "N",
+            "add_num_road_address": "4/191-195 HULL ROAD",
+            "add_locality_name": "MOOROOLBARK",
+            "add_postcode": "3138"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": 3865228,
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  145.310834395026,
+                  -37.7886355880384
+                ],
+                [
+                  145.310860542289,
+                  -37.7884893697324
+                ],
+                [
+                  145.310884206609,
+                  -37.788492034768
+                ],
+                [
+                  145.310888941628,
+                  -37.7884654802469
+                ],
+                [
+                  145.310912370589,
+                  -37.7884681147568
+                ],
+                [
+                  145.310903489844,
+                  -37.788517843155
+                ],
+                [
+                  145.310926224408,
+                  -37.7885204038315
+                ],
+                [
+                  145.310904141123,
+                  -37.7886434652827
+                ],
+                [
+                  145.310834395026,
+                  -37.7886355880384
+                ]
+              ]
+            ]
+          },
+          "properties": {
+            "OBJECTID": 3865228,
+            "prop_pfi": "52715900",
+            "prop_status": "A",
+            "propv_z_level": "G",
+            "add_pfi": "53945444",
+            "add_property_pfi": "52715900",
+            "add_ezi_address": "3/191-195 HULL ROAD MOOROOLBARK 3138",
+            "add_is_primary": "Y",
+            "add_source_verified": 1260316800000,
+            "add_blg_unit_type": "SHOP",
+            "add_blg_unit_id_1": 3,
+            "add_blg_unit_id_2": null,
+            "add_floor_type": null,
+            "add_floor_no_1": null,
+            "add_floor_no_2": null,
+            "add_building_name": null,
+            "add_complex_name": null,
+            "add_complex_site": "N",
+            "add_num_road_address": "3/191-195 HULL ROAD",
+            "add_locality_name": "MOOROOLBARK",
+            "add_postcode": "3138"
+          }
+        },
+        {
+          "type": "Feature",
+          "id": 3900198,
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  145.310764975916,
+                  -37.7886277441593
+                ],
+                [
+                  145.310795630925,
+                  -37.7884550998084
+                ],
+                [
+                  145.310888941628,
+                  -37.7884654802469
+                ],
+                [
+                  145.310884206609,
+                  -37.788492034768
+                ],
+                [
+                  145.310860542289,
+                  -37.7884893697324
+                ],
+                [
+                  145.310834395026,
+                  -37.7886355880384
+                ],
+                [
+                  145.310764975916,
+                  -37.7886277441593
+                ]
+              ]
+            ]
+          },
+          "properties": {
+            "OBJECTID": 3900198,
+            "prop_pfi": "52715899",
+            "prop_status": "A",
+            "propv_z_level": "G",
+            "add_pfi": "53945443",
+            "add_property_pfi": "52715899",
+            "add_ezi_address": "2/191-195 HULL ROAD MOOROOLBARK 3138",
+            "add_is_primary": "Y",
+            "add_source_verified": 1260316800000,
+            "add_blg_unit_type": "SHOP",
+            "add_blg_unit_id_1": 2,
+            "add_blg_unit_id_2": null,
+            "add_floor_type": null,
+            "add_floor_no_1": null,
+            "add_floor_no_2": null,
+            "add_building_name": null,
+            "add_complex_name": null,
+            "add_complex_site": "N",
+            "add_num_road_address": "2/191-195 HULL ROAD",
+            "add_locality_name": "MOOROOLBARK",
+            "add_postcode": "3138"
+          }
+        }
+      ]
+    },
+    {
+      "scene": "mooroolbark-50011498-17-118446-80409",
+      "object": "cc22cc433bafe31a",
+      "roof": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              145.3218725323677,
+              -37.77471544932099
+            ],
+            [
+              145.32192885875702,
+              -37.77471332923481
+            ],
+            [
+              145.32195031642914,
+              -37.77471756940713
+            ],
+            [
+              145.3219637274742,
+              -37.774726049751045
+            ],
+            [
+              145.3219798207283,
+              -37.774726049751045
+            ],
+            [
+              145.32199323177338,
+              -37.774702728802936
+            ],
+            [
+              145.3220173716545,
+              -37.774683648021735
+            ],
+            [
+              145.3220173716545,
+              -37.77467728776024
+            ],
+            [
+              145.32200664281845,
+              -37.7746730475856
+            ],
+            [
+              145.3219422698021,
+              -37.77466244714796
+            ],
+            [
+              145.32192885875702,
+              -37.77465608688464
+            ],
+            [
+              145.32185643911362,
+              -37.77465184670879
+            ],
+            [
+              145.32184839248657,
+              -37.77466244714796
+            ],
+            [
+              145.3218725323677,
+              -37.77471544932099
+            ]
+          ]
+        ]
+      },
+      "expected": "matched",
+      "features": [
+        {
+          "type": "Feature",
+          "id": 4040198,
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  145.32297760095,
+                  -37.7747606317837
+                ],
+                [
+                  145.322908267179,
+                  -37.7749167440964
+                ],
+                [
+                  145.322852760278,
+                  -37.7750417190569
+                ],
+                [
+                  145.322670376224,
+                  -37.775025476705
+                ],
+                [
+                  145.322536144564,
+                  -37.775013511681
+                ],
+                [
+                  145.322330282142,
+                  -37.7749951050949
+                ],
+                [
+                  145.322123969664,
+                  -37.7749766828832
+                ],
+                [
+                  145.321848902829,
+                  -37.7749521059628
+                ],
+                [
+                  145.32135878201,
+                  -37.7749083129706
+                ],
+                [
+                  145.321008580085,
+                  -37.7737543636733
+                ],
+                [
+                  145.321030869084,
+                  -37.7736200293435
+                ],
+                [
+                  145.321236938118,
+                  -37.773640317225
+                ],
+                [
+                  145.321442965831,
+                  -37.7736606058109
+                ],
+                [
+                  145.321648972881,
+                  -37.7736809078825
+                ],
+                [
+                  145.321854935016,
+                  -37.7737012170491
+                ],
+                [
+                  145.322060880982,
+                  -37.7737215318906
+                ],
+                [
+                  145.322266814371,
+                  -37.7737418559573
+                ],
+                [
+                  145.322475591826,
+                  -37.7737624782437
+                ],
+                [
+                  145.322681691403,
+                  -37.7737833121224
+                ],
+                [
+                  145.322887566402,
+                  -37.7738043029185
+                ],
+                [
+                  145.322955433223,
+                  -37.7738106948781
+                ],
+                [
+                  145.323093456672,
+                  -37.7738252979689
+                ],
+                [
+                  145.323299258907,
+                  -37.7738470797594
+                ],
+                [
+                  145.323380415404,
+                  -37.773855831243
+                ],
+                [
+                  145.323323426283,
+                  -37.7739838697682
+                ],
+                [
+                  145.323254257802,
+                  -37.7741391692859
+                ],
+                [
+                  145.323185066864,
+                  -37.7742944876489
+                ],
+                [
+                  145.323115877723,
+                  -37.7744498340877
+                ],
+                [
+                  145.323046716429,
+                  -37.7746052128625
+                ],
+                [
+                  145.32297760095,
+                  -37.7747606317837
+                ]
+              ]
+            ]
+          },
+          "properties": {
+            "OBJECTID": 4040198,
+            "prop_pfi": "1339330",
+            "prop_status": "A",
+            "propv_z_level": "G",
+            "add_pfi": "51237044",
+            "add_property_pfi": "1339330",
+            "add_ezi_address": "118 HAYRICK LANE MOOROOLBARK 3138",
+            "add_is_primary": "Y",
+            "add_source_verified": 1780444800000,
+            "add_blg_unit_type": null,
+            "add_blg_unit_id_1": null,
+            "add_blg_unit_id_2": null,
+            "add_floor_type": null,
+            "add_floor_no_1": null,
+            "add_floor_no_2": null,
+            "add_building_name": null,
+            "add_complex_name": null,
+            "add_complex_site": "Y",
+            "add_num_road_address": "118 HAYRICK LANE",
+            "add_locality_name": "MOOROOLBARK",
+            "add_postcode": "3138"
+          }
+        }
+      ]
+    }
+  ]
+}

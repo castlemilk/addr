@@ -1,0 +1,56 @@
+{
+  "checkedAt": "2026-09-27T04:05:10Z",
+  "url": "https://fieldwork-annotations.ben-ebsworth.workers.dev",
+  "versionId": "8c694118-1ea7-48cf-b191-1c23ccac10df",
+  "container": {
+    "id": "a03e7a53-0294-4cb8-9cf8-5164b7b9a053",
+    "name": "fieldwork-annotations-annotationbackend",
+    "state": "active",
+    "instances": 1,
+    "image": "registry.cloudflare.com/2132ccf47ceb5fff234c34d85490470a/fieldwork-annotations-annotationbackend@sha256:019b63b24a9a72f14ae935d71a289faf5d1ce75b97163fc0242d46eaceb78238",
+    "version": 4,
+    "updated_at": "2026-09-27T03:58:00.065999872Z",
+    "created_at": "2026-09-27T01:51:30.643000064Z"
+  },
+  "frontendEntry": "/assets/index-R2v5iQhH.js",
+  "readinessStatus": 200,
+  "anonymousExistingAssetStatus": 401,
+  "earlierPostRolloutReadinessFailureCategoryNotCaptured": true,
+  "subsequentDirectReadinessRetryPassed": true,
+  "intermediatePublicIndexCheckCurlExit": 35,
+  "samples": [
+    {
+      "checkedAt": "2026-09-27T04:05:05Z",
+      "path": "/",
+      "curlExit": 0,
+      "httpStatus": 200,
+      "responseCategory": {
+        "bodyType": "html",
+        "bodyBytes": 533
+      },
+      "networkError": ""
+    },
+    {
+      "checkedAt": "2026-09-27T04:05:08Z",
+      "path": "/readyz",
+      "curlExit": 0,
+      "httpStatus": 200,
+      "responseCategory": {
+        "status": "ready"
+      },
+      "networkError": ""
+    },
+    {
+      "checkedAt": "2026-09-27T04:05:10Z",
+      "path": "/api/v1/assets/c818073688e9f7efa090e3e482d2019837e7c2cb68d025f86d1ea137ac5f800f",
+      "curlExit": 0,
+      "httpStatus": 401,
+      "responseCategory": {
+        "code": "unauthenticated",
+        "message": "A valid annotation bearer token is required."
+      },
+      "networkError": ""
+    }
+  ],
+  "scope": "Gzip transport and scene write-contract release. Functional Go/UI changes are live; the subsequent wording-only MCP tool-description edit remains local."
+}

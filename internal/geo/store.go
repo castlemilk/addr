@@ -68,13 +68,14 @@ func NewStore(dbPath string) (*Store, error) {
 		return nil, fmt.Errorf("preparing places statement: %w", err)
 	}
 
+	// No LIMIT: see queryCandidateAddresses. Truncation before distance
+	// ordering can drop the true nearest address.
 	addrsQuery := `
 		SELECT a.id, a.uuid, a.unit, a.number, a.street, a.suburb,
 		       a.state, a.postcode, a.full_address, a.lat, a.lon
 		FROM addresses_rtree r
 		JOIN addresses a ON a.id = r.id
 		WHERE r.minX <= ? AND r.maxX >= ? AND r.minY <= ? AND r.maxY >= ?
-		LIMIT 50;
 	`
 	addrsStmt, err := db.Prepare(addrsQuery)
 	if err != nil {
@@ -227,7 +228,14 @@ func (s *Store) ReverseGeocode(ctx context.Context, lat, lon float64, maxRadius 
 	}
 
 	var bestPlace *Place
-	if len(placeCandidates) > 0 && placeCandidates[0].DistanceMeters != nil && *placeCandidates[0].DistanceMeters <= 50.0 {
+	// Headline POI join radius: a POI only headlines the result (joined with
+	// the cadastral address as poi_and_address) when the tap is on or very
+	// near it. A POI tens of metres away belongs to a different property
+	// (e.g. LKPT Fitness at 29 Cambridge Rd must not headline a tap sitting
+	// on 27 Cambridge Rd's point 42m away); farther POIs stay in the nearby
+	// list but don't join the headline.
+	const headlinePoiRadiusMeters = 25.0
+	if len(placeCandidates) > 0 && placeCandidates[0].DistanceMeters != nil && *placeCandidates[0].DistanceMeters <= headlinePoiRadiusMeters {
 		bestPlace = &placeCandidates[0]
 	}
 
@@ -426,13 +434,16 @@ func (s *Store) queryCandidateAddresses(ctx context.Context, boxMinX, boxMaxX, b
 	if s.addrsStmt != nil {
 		rows, err = s.addrsStmt.QueryContext(ctx, boxMaxX, boxMinX, boxMaxY, boxMinY)
 	} else {
+		// No LIMIT here: truncating the rtree result before distance
+		// ordering can exclude the true nearest address entirely (the rtree
+		// returns rows in arbitrary order). The Go-side planar filter and
+		// sort below pick the actual nearest candidate.
 		query := `
 			SELECT a.id, a.uuid, a.unit, a.number, a.street, a.suburb,
 			       a.state, a.postcode, a.full_address, a.lat, a.lon
 			FROM addresses_rtree r
 			JOIN addresses a ON a.id = r.id
 			WHERE r.minX <= ? AND r.maxX >= ? AND r.minY <= ? AND r.maxY >= ?
-			LIMIT 50;
 		`
 		rows, err = s.db.QueryContext(ctx, query, boxMaxX, boxMinX, boxMaxY, boxMinY)
 	}

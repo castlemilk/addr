@@ -1,0 +1,19 @@
+{
+  "scope": "isolated local Mooroolbark fixture, including its prior notes-only verification edit",
+  "origin": "http://127.0.0.1:8096",
+  "projectId": "mooroolbark",
+  "cursor": "519",
+  "items": 507,
+  "labels": 10,
+  "annotations": 43316,
+  "mirrorBytes": 49148046,
+  "compactExportBytes": 49147911,
+  "exportExactlyMatchesMirror": true,
+  "exportBelowImport64MiBLimit": true,
+  "secondSync": {
+    "changes": 0,
+    "updated": false,
+    "fromCursor": "519",
+    "cursor": "519"
+  }
+}

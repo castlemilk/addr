@@ -1,0 +1,24 @@
+{
+  "checkedAt": "2026-09-27T04:18:00Z",
+  "url": "https://fieldwork-annotations.ben-ebsworth.workers.dev",
+  "versionId": "e8e60cc3-efe9-49ab-8981-7db8b42537b0",
+  "container": {
+    "id": "a03e7a53-0294-4cb8-9cf8-5164b7b9a053",
+    "name": "fieldwork-annotations-annotationbackend",
+    "state": "active",
+    "instances": 1,
+    "image": "registry.cloudflare.com/2132ccf47ceb5fff234c34d85490470a/fieldwork-annotations-annotationbackend@sha256:d7810e08272225d966535c217e671fcece31553d5ec1c2ee758f9960e952d93a",
+    "version": 5,
+    "updated_at": "2026-09-27T04:14:28.179000064Z",
+    "created_at": "2026-09-27T01:51:30.643000064Z"
+  },
+  "frontendEntry": "/assets/index-R2v5iQhH.js",
+  "readinessStatus": 200,
+  "latestMCPDescriptionPresent": true,
+  "mcpToolCount": 14,
+  "labelValidationQueriesPerItem": "one per distinct nonempty label",
+  "importPausedBeforeDocumentCreation": true,
+  "firstRegistryPushTimedOut": true,
+  "registryRetrySucceeded": true,
+  "scope": "Label lookup optimization and latest MCP guidance included before Mooroolbark document creation; frontend and gzip protocol unchanged."
+}

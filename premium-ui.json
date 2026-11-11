@@ -1,0 +1,11 @@
+{
+  "profile": "product-admin",
+  "sourceRoots": ["src"],
+  "locale": "en-AU",
+  "canonicalMap": "UX-CONTRACT.md",
+  "requiredCapabilities": ["Select/Listbox", "Form", "Scrollbar", "Toast", "CRUD"],
+  "ownership": { "Select/Listbox": "native" },
+  "requiredCommands": ["unit", "lint", "build", "ui"],
+  "commands": { "unit": "task test", "lint": "task lint", "build": "pnpm build", "ui": "task verify:ui" },
+  "evidence": { "crudFullFlow": "scripts/test-reviews.mjs", "failurePaths": "scripts/test-reviews.mjs" }
+}

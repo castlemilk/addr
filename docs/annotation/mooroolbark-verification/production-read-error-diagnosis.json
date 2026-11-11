@@ -1,0 +1,461 @@
+{
+  "checkedAt": "2026-09-27T05:07:00Z",
+  "workerVersion": "cb5703d2-7e7b-44b9-9bd3-4e07e16e8a7c",
+  "containerVersion": 6,
+  "containerImage": "sha256:a6de1e8164434ceefcf05bdbbf3eb82f37964d19fd82cc6588a02bfdb78ace1d",
+  "source": "Cloudflare dashboard, Containers \u2192 fieldwork-annotations-annotationbackend \u2192 Logs; existing authenticated browser session",
+  "productionLog": {
+    "at": "2026-09-27T05:02:09Z",
+    "event": "annotation_internal",
+    "method": "GetItem",
+    "stage": "store_get",
+    "error_type": "*pq.Error",
+    "pg_code": "08P01",
+    "pg_severity": "ERROR",
+    "pg_message": "bind message supplies 2 parameters, but prepared statement [redacted] requires 3"
+  },
+  "boundedReplay": {
+    "startedAt": "2026-09-27T05:01:58Z",
+    "finishedAt": "2026-09-27T05:02:13Z",
+    "method": "GetItem",
+    "concurrency": 8,
+    "requests": 64,
+    "retries": 0,
+    "statuses": {
+      "200": 51,
+      "500": 13
+    },
+    "results": [
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 2.659,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 2.019,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 2.799,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.433,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 2.495,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 3.123,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 2.526,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 2.041,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.915,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.493,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.48,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.381,
+        "error": {}
+      },
+      {
+        "httpStatus": 500,
+        "curlExit": 0,
+        "seconds": 0.728,
+        "error": {
+          "code": "internal",
+          "message": "annotation storage request failed"
+        }
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.049,
+        "error": {}
+      },
+      {
+        "httpStatus": 500,
+        "curlExit": 0,
+        "seconds": 0.772,
+        "error": {
+          "code": "internal",
+          "message": "annotation storage request failed"
+        }
+      },
+      {
+        "httpStatus": 500,
+        "curlExit": 0,
+        "seconds": 0.687,
+        "error": {
+          "code": "internal",
+          "message": "annotation storage request failed"
+        }
+      },
+      {
+        "httpStatus": 500,
+        "curlExit": 0,
+        "seconds": 0.447,
+        "error": {
+          "code": "internal",
+          "message": "annotation storage request failed"
+        }
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.571,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.237,
+        "error": {}
+      },
+      {
+        "httpStatus": 500,
+        "curlExit": 0,
+        "seconds": 0.647,
+        "error": {
+          "code": "internal",
+          "message": "annotation storage request failed"
+        }
+      },
+      {
+        "httpStatus": 500,
+        "curlExit": 0,
+        "seconds": 0.475,
+        "error": {
+          "code": "internal",
+          "message": "annotation storage request failed"
+        }
+      },
+      {
+        "httpStatus": 500,
+        "curlExit": 0,
+        "seconds": 0.718,
+        "error": {
+          "code": "internal",
+          "message": "annotation storage request failed"
+        }
+      },
+      {
+        "httpStatus": 500,
+        "curlExit": 0,
+        "seconds": 0.647,
+        "error": {
+          "code": "internal",
+          "message": "annotation storage request failed"
+        }
+      },
+      {
+        "httpStatus": 500,
+        "curlExit": 0,
+        "seconds": 0.548,
+        "error": {
+          "code": "internal",
+          "message": "annotation storage request failed"
+        }
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 2.282,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 2.53,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.079,
+        "error": {}
+      },
+      {
+        "httpStatus": 500,
+        "curlExit": 0,
+        "seconds": 0.646,
+        "error": {
+          "code": "internal",
+          "message": "annotation storage request failed"
+        }
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.831,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.55,
+        "error": {}
+      },
+      {
+        "httpStatus": 500,
+        "curlExit": 0,
+        "seconds": 0.819,
+        "error": {
+          "code": "internal",
+          "message": "annotation storage request failed"
+        }
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.093,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 2.331,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.775,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.57,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.327,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.208,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 0.803,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.144,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 0.92,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.461,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 0.789,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.506,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 0.94,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.356,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 0.788,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 0.794,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 0.872,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 2.322,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.684,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 2.149,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.877,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.701,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.986,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.552,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 2.864,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 3.045,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 4.155,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.548,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.437,
+        "error": {}
+      },
+      {
+        "httpStatus": 500,
+        "curlExit": 0,
+        "seconds": 0.983,
+        "error": {
+          "code": "internal",
+          "message": "annotation storage request failed"
+        }
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.535,
+        "error": {}
+      },
+      {
+        "httpStatus": 500,
+        "curlExit": 0,
+        "seconds": 0.564,
+        "error": {
+          "code": "internal",
+          "message": "annotation storage request failed"
+        }
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.891,
+        "error": {}
+      }
+    ]
+  },
+  "status": "Resolved by the pooled-protocol fix; see production-protocol-fix-verification.json.",
+  "resolution": {
+    "resolved": true,
+    "checkedAt": "2026-09-27T05:11:58Z",
+    "proof": "production-protocol-fix-verification.json",
+    "note": "Historical failure evidence above is preserved. Final production replay passed all 64 requests without retries."
+  }
+}

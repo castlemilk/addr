@@ -228,3 +228,29 @@ def test_gzip_helper():
     data = b"abc" * 100
     compressed = gzip.compress(data)
     assert compressed[:2] == b"\x1f\x8b"
+
+
+def test_wgs84_to_mvt_local_round_trip():
+    import mapbox_vector_tile
+    from scripts.ml.tiles import (
+        MVTFeature,
+        encode_mvt_tile,
+        tile_local_to_lonlat,
+        wgs84_to_mvt_local,
+    )
+
+    zoom, column, row = 16, 59220, 25326
+    xyz_y = (1 << zoom) - 1 - row
+    ring = [(-64, 3544), (-64, 3647), (-50, 3642), (-40, 3600), (-64, 3544)]
+    encoded = []
+    for px, py in ring:
+        lon, lat = tile_local_to_lonlat(px, py, column, xyz_y, zoom)
+        ex, ey = wgs84_to_mvt_local(lon, lat, column, xyz_y, zoom)
+        encoded.append((int(round(ex)), int(round(ey))))
+    blob = encode_mvt_tile({"building": [MVTFeature.from_rings(encoded, properties={})]})
+    decoded = mapbox_vector_tile.decode(blob, default_options={"y_coord_down": True})["building"]["features"]
+    assert decoded
+    coordinates = decoded[0]["geometry"]["coordinates"]
+    decoded_ring = coordinates[0] if decoded[0]["geometry"]["type"] == "Polygon" else coordinates[0][0]
+    # The encoder normalizes winding, but must preserve every coordinate.
+    assert set(map(tuple, decoded_ring)) == set(ring)

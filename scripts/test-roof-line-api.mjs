@@ -1,0 +1,35 @@
+import assert from 'node:assert/strict';
+import {readFile,mkdir,writeFile,cp,rm} from 'node:fs/promises';
+const base=process.env.APP_URL||'http://localhost:3008',id=`qa_roof_lines_api_${Date.now()}`,folder=`data/scenes/${id}`;
+const model=JSON.parse(await readFile('data/scenes/roof_training_250-29790/latest.json','utf8'));
+model.id=id;model.groups=[];
+model.objects=[{...model.objects.find(o=>o.kind==='building'),id:'roof',label:'Line feedback fixture',ring:[[100,100],[400,100],[400,300],[100,300]],holes:[],group_id:undefined,roof_parts:undefined,roof_lines:undefined,roof_annotation:null,roof_type:undefined,model:{...model.objects[0].model,height_m:3}}];
+const transform=(p,m)=>[p[0]*m[0][0]+p[1]*m[1][0]+m[2][0],p[0]*m[0][1]+p[1]*m[1][1]+m[2][1]];
+await mkdir(folder);await writeFile(`${folder}/latest.json`,JSON.stringify(model));await cp(`data/scenes/roof_training_250-29790/${model.image_sha256}.png`,`${folder}/${model.image_sha256}.png`);
+const feedback=()=>fetch(`${base}/api/scenes/roof-feedback?id=${id}&object=roof`);
+const save=review=>fetch(`${base}/api/scenes`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,review})});
+try{
+ assert.equal((await feedback()).status,404);
+ let review={revision:0,model_signature:model.model_signature,objects:model.objects,groups:[],reviewed_classes:[]};
+ let response=await save(review);assert.equal(response.status,200,await response.clone().text());review=(await response.json()).review;
+ response=await feedback();assert.equal(response.status,200);assert.equal((await response.json()).objects[0].feedback_status,'not-saved');
+ const baseline={vertices:[[150,200],[350,200]].map(p=>transform(p,model.pixel_to_meters)),edges:[{a:0,b:1,kind:'ridge'}]};
+ review.objects[0].roof_line_edits={schema_version:1,outline:{ring:review.objects[0].ring,holes:[]},baseline:structuredClone(baseline),vertices:[[150,210],[350,210]].map(p=>transform(p,model.pixel_to_meters)),edges:[{a:0,b:1,kind:'valley'}],checked:false,notes:'This is a valley, shifted below the estimate.'};
+ const stale=structuredClone(review);
+ response=await save(review);assert.equal(response.status,200,await response.clone().text());review=(await response.json()).review;
+ assert.equal(review.revision,2);assert.equal(review.history.length,1);
+ response=await feedback();assert.equal(response.headers.get('cache-control'),'no-store');let loaded=await response.json();
+ assert.equal(loaded.revision,2);assert(loaded.updated_by);assert.equal(loaded.objects[0].feedback_status,'draft');assert.equal(loaded.objects[0].usable_as_review_constraints,true);assert.equal(loaded.objects[0].training_eligible,false);
+ assert.equal(loaded.objects[0].feedback.changes.added_or_moved,1);assert.equal(loaded.objects[0].feedback.changes.removed_or_moved,1);
+ loaded.objects[0].feedback.vertices_pixels.forEach((p,i)=>p.forEach((n,j)=>assert(Math.abs(n-[[150,210],[350,210]][i][j])<1e-5)));
+ assert.equal((await save(stale)).status,409);
+ const malformed=structuredClone(review);malformed.objects[0].roof_line_edits.edges[0].b=1000;assert.equal((await save(malformed)).status,400);
+ const invalid=structuredClone(review);invalid.objects[0].roof_line_edits.vertices[0]=transform([0,0],model.pixel_to_meters);assert.equal((await save(invalid)).status,400);
+ review.objects[0].roof_line_edits.checked=true;response=await save(review);assert.equal(response.status,200);review=(await response.json()).review;
+ assert.equal((await(await feedback()).json()).objects[0].feedback_status,'checked');assert.equal(review.objects[0].model.height_verified,model.objects[0].model.height_verified);
+ review.objects[0].ring[1]=[405,100];response=await save(review);assert.equal(response.status,200);review=(await response.json()).review;
+ loaded=await(await feedback()).json();assert.equal(loaded.objects[0].feedback_status,'stale-outline');assert.equal(loaded.objects[0].usable_as_review_constraints,false);
+ assert.deepEqual(JSON.parse(await readFile(`${folder}/latest.json`,'utf8')),JSON.parse(JSON.stringify(model)));
+ await writeFile(`${folder}/latest.json`,JSON.stringify({...model,model_signature:'f'.repeat(64)}));assert.equal((await feedback()).status,409);
+ console.log('Roof line API: saved-only reads, provenance, coordinate round-trip, draft/check states, CAS, invalid payloads, stale outline/model guards and original prediction preservation passed.');
+}finally{await rm(folder,{recursive:true,force:true});}

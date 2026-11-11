@@ -1,0 +1,43 @@
+.candidate-filters {grid-template-columns:minmax(180px,.8fr) minmax(200px,1fr) minmax(240px,1.2fr);margin-top:28px;}
+.candidate-later-warning {margin-bottom:16px;}
+.candidate-assessment {display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;border-left:2px solid var(--review-line);padding:8px 14px;font-size:12px;}
+.candidate-assessment p {color:var(--review-muted);margin-top:4px;}
+.candidate-assessment.has-regression {border-color:#e3b979;}
+.candidate-assessment.has-regression strong,.candidate-selection .candidate-loss {color:#e3b979;}
+.candidate-evidence {display:flex;flex-wrap:wrap;gap:12px 28px;padding:18px 0;margin-top:28px;border-block:1px solid var(--review-line);font-size:13px;font-variant-numeric:tabular-nums;}
+.candidate-evidence strong {font-weight:500;color:var(--review-accent);}
+.candidate-caveat,.candidate-provenance,.candidate-scene-heading p,.candidate-selection p,.candidate-empty p {font-size:12px;line-height:1.7;color:var(--review-muted);}
+.candidate-caveat {margin:12px 0;max-width:900px;}
+.candidate-provenance summary {cursor:pointer;width:fit-content;}
+.candidate-provenance p {margin-top:8px;overflow-wrap:anywhere;}
+.candidate-message {min-height:120px;padding:30px 0;color:var(--review-muted);}
+.candidate-scene-heading {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;margin:28px 0 16px;}
+.candidate-scene-heading h2 {font-size:14px;font-weight:600;}
+.candidate-workspace {display:grid;grid-template-columns:minmax(0,1.65fr) minmax(260px,1fr);gap:24px;align-items:start;}
+.candidate-image-panel {min-width:0;}
+.candidate-image-controls {display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding-bottom:12px;}
+.candidate-image-controls label {display:flex;align-items:center;gap:6px;font-size:11px;}
+.candidate-image {display:block;width:100%;aspect-ratio:1;background:var(--review-surface);border:1px solid var(--review-line);border-radius:8px;}
+.candidate-image path[role=button] {cursor:pointer;stroke-width:1.5;vector-effect:non-scaling-stroke;fill-opacity:.05;}
+.candidate-image .candidate-kept {fill:#8ce2ba;stroke:#8ce2ba;}
+.candidate-image .candidate-filtered {fill:#e3b979;stroke:#e3b979;stroke-dasharray:5 4;}
+.candidate-image path.is-selected {stroke-width:3;fill-opacity:.16;}
+.candidate-image path[role=button]:focus-visible {outline:none;stroke:white;stroke-width:4;}
+.candidate-legend {display:flex;flex-wrap:wrap;gap:8px 18px;font-size:11px;color:var(--review-muted);padding-top:10px;}
+.candidate-kept-key {color:#8ce2ba;}
+.candidate-filtered-key {color:#e3b979;}
+.candidate-inspector {min-width:0;padding:18px;border:1px solid var(--review-line);border-radius:8px;background:var(--review-surface);}
+.candidate-inspector select {display:block;margin:8px 0 20px;width:100%;}
+.candidate-selection h3 {font-size:14px;font-weight:600;margin-bottom:6px;}
+.candidate-selection>span {font-size:12px;font-variant-numeric:tabular-nums;}
+.candidate-selection p {margin:12px 0;}
+.candidate-selection .review-button {width:100%;}
+.candidate-selection .candidate-hint {font-size:11px;}
+.candidate-empty {padding-bottom:18px;}
+.candidate-empty p {margin:10px 0;}
+.candidate-proposal-list {border-top:1px solid var(--review-line);margin-top:18px;}
+.candidate-proposal-list button {display:flex;justify-content:space-between;gap:12px;align-items:center;text-align:left;width:100%;min-height:44px;font-size:12px;padding:12px 8px;border-bottom:1px solid var(--review-line);}
+.candidate-proposal-list button span:last-child {font-size:11px;color:var(--review-muted);font-variant-numeric:tabular-nums;}
+.candidate-proposal-list button:hover {background:var(--review-raised);}
+.candidate-proposal-list button[aria-pressed=true] {box-shadow:inset 2px 0 var(--review-accent);background:var(--review-raised);}
+@media(max-width:850px) {.candidate-workspace {grid-template-columns:1fr;}.candidate-filters {grid-template-columns:1fr;gap:12px;}.candidate-inspector {padding:16px;}}

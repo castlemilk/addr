@@ -1,0 +1,53 @@
+{
+  "scope": "Small read-only diagnostics while document creation was in progress. The report item is last in import order, so its404 was expected.",
+  "checks": [
+    {
+      "checkedAt": "2026-09-27T04:30:18Z",
+      "method": "ListLabels",
+      "target": "example-fieldwork",
+      "httpStatus": 200,
+      "curlExit": 0,
+      "errorCategory": {},
+      "resultKeys": [
+        "labels",
+        "nextCursor"
+      ]
+    },
+    {
+      "checkedAt": "2026-09-27T04:30:19Z",
+      "method": "ListItems",
+      "target": "example-fieldwork",
+      "httpStatus": 200,
+      "curlExit": 0,
+      "errorCategory": {},
+      "resultKeys": [
+        "items",
+        "nextCursor"
+      ]
+    },
+    {
+      "checkedAt": "2026-09-27T04:30:19Z",
+      "method": "GetItem",
+      "target": "example-image",
+      "httpStatus": 200,
+      "curlExit": 0,
+      "errorCategory": {},
+      "resultKeys": [
+        "item",
+        "labels",
+        "labelsNextCursor"
+      ]
+    },
+    {
+      "checkedAt": "2026-09-27T04:30:20Z",
+      "method": "GetItem",
+      "target": "000-mooroolbark-report",
+      "httpStatus": 404,
+      "curlExit": 0,
+      "errorCategory": {
+        "code": "not_found",
+        "message": "not found"
+      }
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "canonicalInventoryMatches": true,
+  "method": "Restored reader code and restored data; exact JSON excluding fetched_at",
+  "canonicalSha256": "c4aaba2ae3e11c9e1a612cf196aa8287cf653fe0d0050976a56ec373bfc1b41e",
+  "reader": "scripts/ml/scene_processing.py",
+  "roofs": 10339,
+  "bands": {
+    "high": 31,
+    "medium": 8416,
+    "low": 1892
+  },
+  "scanObjects": {
+    "tree": 7874,
+    "building": 10072,
+    "solar_panel": 2163
+  },
+  "tiles": 257,
+  "addressCounts": {
+    "matched": 8161,
+    "ambiguous": 1985,
+    "shared": 187,
+    "linked": 1,
+    "unmatched": 5
+  }
+}

@@ -1,0 +1,217 @@
+syntax = "proto3";
+
+package crm.v1;
+
+option go_package = "github.com/benebsworth/addr/gen/go/crm/v1;crmv1";
+
+// CrmService provides per-address CRM editing: address metadata, extracted or
+// drawn roof/tree/object boundaries, and POI records. Every RPC requires a
+// bearer credential with the scope noted on the method; role assignments are
+// managed out of band (see cmd/crmctl).
+service CrmService {
+  // WhoAmI resolves the presented credential to a principal and its scopes.
+  // Requires: crm.read
+  rpc WhoAmI(WhoAmIRequest) returns (WhoAmIResponse);
+
+  // GetAddressCrm returns the CRM state for a G-NAF address id: metadata,
+  // spatial overrides (roof/tree/object) and POIs attached to the address.
+  // Requires: crm.read
+  rpc GetAddressCrm(GetAddressCrmRequest) returns (GetAddressCrmResponse);
+
+  // SearchAddresses finds addresses for the CRM editor.
+  // Requires: crm.read
+  rpc SearchAddresses(SearchAddressesRequest) returns (SearchAddressesResponse);
+
+  // UpdateAddressMeta upserts the per-address metadata record.
+  // Requires: crm.address.write
+  rpc UpdateAddressMeta(UpdateAddressMetaRequest) returns (UpdateAddressMetaResponse);
+
+  // UpsertFeature creates or replaces a boundary override. Scope depends on the
+  // feature kind: roof -> crm.roof.write, tree -> crm.tree.write,
+  // object -> crm.object.write.
+  rpc UpsertFeature(UpsertFeatureRequest) returns (UpsertFeatureResponse);
+
+  // DeleteFeature removes a boundary override by id.
+  // Requires: scope of the feature kind (see UpsertFeature).
+  rpc DeleteFeature(DeleteFeatureRequest) returns (DeleteFeatureResponse);
+
+  // CreatePoi adds a POI. Requires: crm.poi.write
+  rpc CreatePoi(CreatePoiRequest) returns (CreatePoiResponse);
+
+  // UpdatePoi edits a POI. Requires: crm.poi.write
+  rpc UpdatePoi(UpdatePoiRequest) returns (UpdatePoiResponse);
+
+  // DeletePoi removes a POI. Requires: crm.poi.write
+  rpc DeletePoi(DeletePoiRequest) returns (DeletePoiResponse);
+
+  // ListPois lists POIs, optionally filtered by address or bounding box.
+  // Requires: crm.read
+  rpc ListPois(ListPoisRequest) returns (ListPoisResponse);
+}
+
+enum FeatureKind {
+  FEATURE_KIND_UNSPECIFIED = 0;
+  FEATURE_KIND_ROOF = 1;
+  FEATURE_KIND_TREE = 2;
+  FEATURE_KIND_OBJECT = 3;
+}
+
+message AddressMeta {
+  int64 address_id = 1;
+  string full_address = 2;
+  optional string status = 3; // e.g. lead, quoted, won, lost, archived
+  optional string owner_name = 4;
+  optional string owner_email = 5;
+  optional string owner_phone = 6;
+  optional string notes = 7;
+  repeated string tags = 8;
+  optional string updated_at = 9;
+  optional string updated_by = 10;
+}
+
+message SpatialFeature {
+  int64 id = 1;
+  int64 address_id = 2;
+  FeatureKind kind = 3;
+  // GeoJSON geometry (Polygon or MultiPolygon) in WGS84.
+  string geometry_json = 4;
+  optional string label = 5; // e.g. "shed", "pool", "gable"
+  map<string, string> properties = 6;
+  string updated_at = 7;
+  string updated_by = 8;
+}
+
+message Poi {
+  int64 id = 1;
+  string name = 2;
+  optional string category = 3;
+  optional string address_text = 4;
+  double latitude = 5;
+  double longitude = 6;
+  optional string phone = 7;
+  optional string website = 8;
+  optional int64 address_id = 9;
+  optional string notes = 10;
+  string updated_at = 11;
+  string updated_by = 12;
+  // Computed distance from the query point when requested.
+  optional double distance_meters = 13;
+}
+
+message WhoAmIRequest {}
+
+message WhoAmIResponse {
+  string principal = 1;
+  repeated string roles = 2;
+  repeated string scopes = 3;
+  optional string key_label = 4;
+}
+
+message GetAddressCrmRequest {
+  int64 address_id = 1;
+}
+
+message GetAddressCrmResponse {
+  AddressMeta meta = 1;
+  repeated SpatialFeature features = 2;
+  repeated Poi pois = 3;
+}
+
+message SearchAddressesRequest {
+  string query = 1;
+  optional double latitude = 2;
+  optional double longitude = 3;
+  optional int32 limit = 4;
+}
+
+message SearchAddressesResponse {
+  repeated AddressMeta addresses = 1;
+}
+
+message UpdateAddressMetaRequest {
+  int64 address_id = 1;
+  optional string status = 2;
+  optional string owner_name = 3;
+  optional string owner_email = 4;
+  optional string owner_phone = 5;
+  optional string notes = 6;
+  repeated string tags = 7;
+}
+
+message UpdateAddressMetaResponse {
+  AddressMeta meta = 1;
+}
+
+message UpsertFeatureRequest {
+  int64 id = 1; // 0 creates, >0 replaces
+  int64 address_id = 2;
+  FeatureKind kind = 3;
+  string geometry_json = 4;
+  optional string label = 5;
+  map<string, string> properties = 6;
+}
+
+message UpsertFeatureResponse {
+  SpatialFeature feature = 1;
+}
+
+message DeleteFeatureRequest {
+  int64 id = 1;
+}
+
+message DeleteFeatureResponse {}
+
+message CreatePoiRequest {
+  string name = 1;
+  optional string category = 2;
+  optional string address_text = 3;
+  double latitude = 4;
+  double longitude = 5;
+  optional string phone = 6;
+  optional string website = 7;
+  optional int64 address_id = 8;
+  optional string notes = 9;
+}
+
+message CreatePoiResponse {
+  Poi poi = 1;
+}
+
+message UpdatePoiRequest {
+  int64 id = 1;
+  optional string name = 2;
+  optional string category = 3;
+  optional string address_text = 4;
+  optional double latitude = 5;
+  optional double longitude = 6;
+  optional string phone = 7;
+  optional string website = 8;
+  optional int64 address_id = 9;
+  optional string notes = 10;
+}
+
+message UpdatePoiResponse {
+  Poi poi = 1;
+}
+
+message DeletePoiRequest {
+  int64 id = 1;
+}
+
+message DeletePoiResponse {}
+
+message ListPoisRequest {
+  optional int64 address_id = 1;
+  optional double min_latitude = 2;
+  optional double min_longitude = 3;
+  optional double max_latitude = 4;
+  optional double max_longitude = 5;
+  optional double near_latitude = 6;
+  optional double near_longitude = 7;
+  optional double radius_meters = 8;
+  optional int32 limit = 9;
+}
+
+message ListPoisResponse {
+  repeated Poi pois = 1;
+}

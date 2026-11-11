@@ -19,7 +19,7 @@ import logging
 import math
 import sys
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, cast
 
@@ -37,7 +37,12 @@ from .depth import (
     estimate_heights,
     estimate_meters_per_unit,
 )
-from .footprints import LocalFootprint, footprint_properties, merge_footprints
+from .footprints import (
+    LocalFootprint,
+    dedupe_footprints,
+    footprint_properties,
+    merge_footprints,
+)
 from .imagery import ImageryFetcher, ImageryWindow
 from .osm import OsmFootprint, fetch_osm_buildings
 from .presets import DEFAULT_SEGMENTER, SEGMENTER_PRESETS, get_preset
@@ -108,6 +113,10 @@ class PipelineConfig:
     sam3_add_detections: bool = True
     sam3_trees: bool = False
     sam3_tree_prompt: str = "tree"
+    sam3_min_evidence: float = 0.0
+    max_building_vegetation_ratio: float = 0.7
+    carve_contained_trees: bool = False
+    refine_conflicts: bool = True
     use_osm: bool = True
     overpass_endpoint: str | None = None
     heuristic: bool = False
@@ -138,6 +147,7 @@ class TileResult:
     osm_count: int = 0
     tree_count: int = 0
     merged_count: int = 0
+    quality: dict = field(default_factory=dict)
 
 
 def build_segmenter(cfg: PipelineConfig):
@@ -220,15 +230,19 @@ def _merge_sam3_polygons(
     add_score_threshold: float,
     add_min_area_m2: float,
     add_max_area_m2: float,
-) -> list[Polygon]:
+    min_evidence: float = 0.0,
+) -> tuple[list[Polygon], int]:
     """Replaces/extends pixel-space polygons with better-overlapping SAM3 proposals.
 
     Each base polygon is replaced by its best proposal when the IoU and area
-    ratio are plausible; high-confidence unmatched proposals are appended so
-    SAM3 can recover objects the base detector missed.
+    ratio are plausible; polygons whose best proposal overlap is below
+    ``min_evidence`` are dropped as likely false positives (e.g. detections over
+    vegetation). High-confidence unmatched proposals are appended so SAM3 can
+    recover objects the base detector missed.
     """
     merged: list[Polygon] = []
     used: set[int] = set()
+    dropped = 0
     for polygon in polygons_px:
         best_index = -1
         best_iou = 0.0
@@ -242,6 +256,9 @@ def _merge_sam3_polygons(
             if iou > best_iou:
                 best_iou = iou
                 best_index = index
+        if best_iou < min_evidence:
+            dropped += 1
+            continue
         if best_index >= 0 and best_iou >= min_iou:
             candidate, _ = proposal_polygons[best_index]
             ratio = candidate.area / max(polygon.area, 1e-6)
@@ -265,7 +282,7 @@ def _merge_sam3_polygons(
                     overlap = max(overlap, candidate.intersection(existing).area / union)
             if overlap < 0.3:
                 merged.append(candidate)
-    return merged
+    return merged, dropped
 
 
 def _sam3_proposal_polygons(
@@ -288,6 +305,22 @@ def _sam3_proposal_polygons(
         best = max(parts, key=lambda part: part.area)
         polygons.append((best, proposal.score))
     return polygons
+
+
+def _vegetation_ratio(polygon: Polygon, veg_mask: np.ndarray) -> float:
+    """Fraction of a pixel-space polygon covered by the vegetation mask."""
+    if polygon.area <= 0 or veg_mask.size == 0:
+        return 0.0
+    height, width = veg_mask.shape[0], veg_mask.shape[1]
+    canvas = Image.new("1", (width, height), 0)
+    ImageDraw.Draw(canvas).polygon(
+        [(px, py) for px, py in polygon.exterior.coords], fill=1
+    )
+    inside = np.asarray(canvas, dtype=bool)
+    total = int(inside.sum())
+    if total == 0:
+        return 0.0
+    return float(np.logical_and(inside, veg_mask).sum()) / float(total)
 
 
 def _refine_roofs_with_sam3(
@@ -323,7 +356,7 @@ def _refine_roofs_with_sam3(
         LOGGER.warning("SAM3 refinement failed (%s); keeping segmenter outlines", error)
         return polygons_px
 
-    refined = _merge_sam3_polygons(
+    refined, dropped = _merge_sam3_polygons(
         polygons_px,
         proposal_polygons,
         min_iou=cfg.sam3_min_iou,
@@ -332,11 +365,17 @@ def _refine_roofs_with_sam3(
         add_score_threshold=max(cfg.sam3_threshold, 0.6),
         add_min_area_m2=10.0,
         add_max_area_m2=1500.0,
+        min_evidence=cfg.sam3_min_evidence,
     )
 
     LOGGER.info(
         "SAM3 refined roofs",
-        extra={"prompt": cfg.sam3_prompt, "proposals": len(proposal_polygons), "out": len(refined)},
+        extra={
+            "prompt": cfg.sam3_prompt,
+            "proposals": len(proposal_polygons),
+            "dropped_no_evidence": dropped,
+            "out": len(refined),
+        },
     )
     return refined
 
@@ -362,6 +401,28 @@ def _building_footprints(
         polygons_px = _refine_roofs_with_sam3(
             cfg, window, polygons_px, sam3, sam3_features
         )
+
+    if cfg.max_building_vegetation_ratio < 1.0 and polygons_px:
+        veg_mask = vegetation_mask(window.image, cfg.exg_threshold)
+        kept: list[Polygon] = []
+        dropped_vegetation = 0
+        for polygon in polygons_px:
+            if _vegetation_ratio(polygon, veg_mask) > cfg.max_building_vegetation_ratio:
+                dropped_vegetation += 1
+                continue
+            kept.append(polygon)
+        if dropped_vegetation:
+            LOGGER.info(
+                "dropped vegetation detections",
+                extra={"dropped": dropped_vegetation, "kept": len(kept)},
+            )
+        polygons_px = kept
+
+    # The same construction-aware envelope used by scene inference also runs
+    # on ML map tiles. It operates on detector masks, never on saved CRM edits.
+    from .roof_surface import refine_roof_surface
+    frame = np.array([[meters_per_px, 0.], [0., -meters_per_px], [0., 0.]])
+    polygons_px = [refine_roof_surface(polygon, window.image, frame)[0] for polygon in polygons_px]
 
     meters_per_unit: float | None = None
     heights: list[float | None] = [None] * len(polygons_px)
@@ -400,6 +461,70 @@ def _building_footprints(
     return footprints, meters_per_unit
 
 
+def _carve_contained_trees(
+    buildings: list[LocalFootprint],
+    trees: list[LocalFootprint],
+    *,
+    containment: float = 0.8,
+    min_tree_area_m2: float = 15.0,
+    min_keep_ratio: float = 0.25,
+    meters_per_local: float,
+    meters_per_px: float,
+) -> tuple[list[LocalFootprint], int]:
+    """Removes canopies that a building detection swallowed.
+
+    When most of a tree polygon falls inside a building footprint the detector
+    merged roof and vegetation; subtracting the canopy keeps the roof outline
+    isolated. Buildings that turn out to be almost entirely vegetation are dropped.
+    """
+    candidates = [
+        tree
+        for tree in trees
+        if (tree.area_m2 or 0.0) >= min_tree_area_m2 and tree.geometry.area > 0
+    ]
+    if not candidates:
+        return buildings, 0
+
+    result: list[LocalFootprint] = []
+    carved = 0
+    for building in buildings:
+        geometry = building.geometry
+        changed = False
+        for tree in candidates:
+            if not geometry.intersects(tree.geometry):
+                continue
+            intersection = geometry.intersection(tree.geometry).area
+            if tree.geometry.area <= 0 or intersection / tree.geometry.area < containment:
+                continue
+            geometry = geometry.difference(tree.geometry)
+            changed = True
+        if not changed:
+            result.append(building)
+            continue
+        if geometry.is_empty:
+            carved += 1
+            continue
+        if geometry.geom_type == "MultiPolygon":
+            geometry = max(geometry.geoms, key=lambda part: part.area)
+        if geometry.area < building.geometry.area * min_keep_ratio:
+            carved += 1
+            continue
+        roof = model_roof(geometry, building.height, meters_per_px)
+        result.append(
+            replace(
+                building,
+                geometry=geometry,
+                area_m2=round(geometry.area * meters_per_local**2, 1),
+                roof_type=roof.roof_type,
+                eave_height=roof.eave_height,
+                ridge_height=roof.ridge_height,
+                ridge_angle_deg=roof.ridge_angle_deg,
+            )
+        )
+        carved += 1
+    return result, carved
+
+
 def _tree_footprints(
     cfg: PipelineConfig,
     window: ImageryWindow,
@@ -433,7 +558,7 @@ def _tree_footprints(
                 min_area_px,
                 simplify_px,
             )
-            polygons_px = _merge_sam3_polygons(
+            polygons_px, _ = _merge_sam3_polygons(
                 polygons_px,
                 proposal_polygons,
                 min_iou=cfg.sam3_min_iou,
@@ -546,6 +671,20 @@ def _geojson_feature(
     }
 
 
+def tile_quality_stats(
+    footprints: list[LocalFootprint], trees: list[LocalFootprint]
+) -> dict:
+    """Compact per-tile quality stats persisted with the archive."""
+    areas = [f.area_m2 for f in footprints if f.area_m2]
+    heights = [f.height for f in footprints if f.height]
+    return {
+        "buildings": len(footprints),
+        "trees": len(trees),
+        "avg_area_m2": round(sum(areas) / len(areas), 1) if areas else 0.0,
+        "avg_height_m": round(sum(heights) / len(heights), 1) if heights else 0.0,
+    }
+
+
 def process_tile(
     cfg: PipelineConfig,
     ctx: PipelineContext,
@@ -586,6 +725,15 @@ def process_tile(
         if cfg.with_trees and depth is not None
         else []
     )
+    if cfg.carve_contained_trees and ml and trees:
+        ml, carved = _carve_contained_trees(
+            ml,
+            trees,
+            meters_per_local=window.tile_span_meters / TILE_EXTENT,
+            meters_per_px=max(window.meters_per_pixel, 1e-6),
+        )
+        if carved:
+            LOGGER.info("carved contained canopies from buildings", extra={"carved": carved})
     osm = _osm_tile_footprints(ctx.osm_footprints, z, x, y)
     west, south, east, north = tile_bounds(x, y, z)
     center_lat = (south + north) / 2.0
@@ -594,12 +742,14 @@ def process_tile(
         osm,
         max_center_distance=_distance_units(center_lat, z, 25.0),
     )
+    merged = dedupe_footprints(merged)
 
     result = TileResult(
         ml_count=len(ml),
         osm_count=len(osm),
         tree_count=len(trees),
         merged_count=len(merged),
+        quality=tile_quality_stats(merged, trees),
     )
     for footprint in merged:
         result.features.append(_mvt_feature(footprint))
@@ -782,6 +932,7 @@ def run(cfg: PipelineConfig) -> dict:
     total_trees = 0
     total_features = 0
     previews_written = 0
+    tile_quality: list[dict] = []
 
     try:
         for z in cfg.zooms:
@@ -813,6 +964,8 @@ def run(cfg: PipelineConfig) -> dict:
                 total_trees += result.tree_count
                 total_features += result.merged_count
                 processed += 1
+                if result.quality:
+                    tile_quality.append({"z": z, "x": x, "y": y, **result.quality})
                 if write_preview:
                     previews_written += 1
 
@@ -827,6 +980,20 @@ def run(cfg: PipelineConfig) -> dict:
                     )
             if cfg.limit_tiles is not None and processed >= cfg.limit_tiles:
                 break
+        writer.set_metadata(
+            {
+                "quality_json": json.dumps(
+                    {
+                        "tiles": tile_quality,
+                        "totals": {
+                            "tiles": processed,
+                            "buildings": total_features,
+                            "trees": total_trees,
+                        },
+                    }
+                )
+            }
+        )
     finally:
         writer.close()
 
@@ -835,6 +1002,20 @@ def run(cfg: PipelineConfig) -> dict:
         cfg.geojson_path.write_text(
             json.dumps({"type": "FeatureCollection", "features": geojson_features})
         )
+
+    if cfg.refine_conflicts and cfg.with_trees and processed > 0:
+        try:
+            from .refine_conflicts import refine
+
+            refined_path = cfg.out_path.with_suffix(".refined.mbtiles")
+            report = refine(cfg.out_path, refined_path)
+            refined_path.replace(cfg.out_path)
+            LOGGER.info(
+                "cross-tile conflict refinement",
+                extra={**{k: v for k, v in report.items()}},
+            )
+        except Exception as error:  # noqa: BLE001
+            LOGGER.warning("cross-tile refinement skipped (%s)", error)
 
     summary = {
         "tiles": processed,
@@ -914,6 +1095,15 @@ def parse_args(argv: list[str] | None = None) -> PipelineConfig:
     parser.add_argument("--sam3-min-iou", default=0.3, type=float)
     parser.add_argument("--no-sam3-add", action="store_true", help="only refine, never add SAM3-only detections")
     parser.add_argument("--sam3-trees", action="store_true", help="also refine/complete tree canopies with SAM3")
+    parser.add_argument("--sam3-min-evidence", default=0.0, type=float,
+                        help="drop detections whose best SAM3 overlap is below this IoU (false-positive filter)")
+    parser.add_argument("--max-building-vegetation", default=0.7, type=float,
+                        help="drop building detections covered by more than this fraction of vegetation (1.0 disables)")
+    parser.add_argument("--carve-contained-trees", action="store_true",
+                        help="subtract canopies contained in building footprints (measured: "
+                             "loses legitimate buildings, no isolation gain; opt-in)")
+    parser.add_argument("--no-refine-conflicts", action="store_true",
+                        help="skip the post-build cross-tile canopy/building refinement")
     parser.add_argument("--sam3-tree-prompt", default="tree", help='SAM3 concept prompt for canopies (e.g. "tree", "tree canopy")')
     parser.add_argument("--no-osm", action="store_true", help="skip Overpass OSM cadastre merge")
     parser.add_argument("--overpass-endpoint", default=None)
@@ -969,6 +1159,10 @@ def parse_args(argv: list[str] | None = None) -> PipelineConfig:
         sam3_add_detections=not args.no_sam3_add,
         sam3_trees=args.sam3_trees,
         sam3_tree_prompt=args.sam3_tree_prompt,
+        sam3_min_evidence=args.sam3_min_evidence,
+        max_building_vegetation_ratio=args.max_building_vegetation,
+        carve_contained_trees=args.carve_contained_trees,
+        refine_conflicts=not args.no_refine_conflicts,
         use_osm=not args.no_osm,
         overpass_endpoint=args.overpass_endpoint,
         heuristic=args.heuristic,

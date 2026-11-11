@@ -1,0 +1,15 @@
+{
+ "attribution": "ACT Aerial Imagery 2023-09 urban 75 mm (ACTmapi ImageServer), ACT Government (ACTmapi) and Aerometrex, CC BY 4.0 (Australian Capital Territory and Aerometrex). Changes: exported at the teacher pixel in 1152 px windows and area-averaged to 0.236 m; building masks are SAM3 model outputs.",
+ "capture": "September 2023",
+ "catalog_at": "2026-09-28T01:30:54.963213+00:00",
+ "crs": "EPSG:7855",
+ "gsd_m": 0.075,
+ "id": "act-2023-urban-75mm",
+ "licence": "CC BY 4.0 (Australian Capital Territory and Aerometrex)",
+ "licence_url": "https://www.actmapi.act.gov.au/terms-and-conditions",
+ "place": "Canberra urban area, ACT, Australia",
+ "publisher": "ACT Government (ACTmapi) and Aerometrex",
+ "service_copyright": "",
+ "title": "ACT Aerial Imagery 2023-09 urban 75 mm (ACTmapi ImageServer)",
+ "url": "https://data4.actmapi.act.gov.au/arcgis/rest/services/ACT_IMAGERY_MGA2020/2023_09_urban_75mm/ImageServer"
+}

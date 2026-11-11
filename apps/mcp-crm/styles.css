@@ -1,0 +1,51 @@
+@import "@openai/mcp-extensions/app/styles.css";
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+.workspace { width: 100%; max-width: 1440px; margin: auto; padding: 22px; }
+.workspace-header, .header-actions, .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.workspace-header { margin-bottom: 22px; }
+.eyebrow { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted-foreground); margin-bottom: 5px; }
+.workspace-grid { display: grid; grid-template-columns: minmax(160px, .6fr) minmax(220px, .85fr) minmax(300px, 1.55fr); gap: 18px; }
+.workspace-grid > * { min-width: 0; }
+.project-pane, .item-pane { padding-right: 18px; border-right: 1px solid var(--border); }
+h2 { font-size: 16px; }
+h3 { font-size: 14px; }
+.search-form { display: flex; gap: 6px; margin-top: 14px; margin-bottom: 10px; }
+.search-form input { min-width: 0; height: 34px; }
+.search-form button { flex-shrink: 0; }
+.document-list { list-style: none; padding: 0; margin: 12px 0; display: grid; gap: 5px; }
+.document-button { display: block; width: 100%; text-align: left; padding: 10px; border: 1px solid transparent; border-radius: var(--radius); color: var(--foreground); background: transparent; font: inherit; cursor: var(--cursor-interaction, pointer); overflow-wrap: anywhere; }
+.document-button:hover { background: var(--card); }
+.document-button[aria-current="true"] { background: var(--accent); border-color: var(--border); }
+.document-button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.document-title { display: block; line-height: 1.35; margin-bottom: 4px; font-weight: 550; }
+.document-meta { display: block; font-size: 11px; color: var(--muted-foreground); line-height: 1.5; }
+.detail-heading { display: grid; gap: 9px; margin-bottom: 18px; }
+.detail-heading h2 { font-size: 19px; overflow-wrap: anywhere; }
+.badge { display: inline-flex; align-items: center; width: fit-content; border: 1px solid var(--border); border-radius: 20px; font-size: 11px; padding: 2px 8px; background: var(--card); }
+.metadata { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 5px 12px; margin: 0 0 18px; font-size: 12px; }
+.metadata dt { color: var(--muted-foreground); }
+.metadata dd { margin: 0; overflow-wrap: anywhere; }
+.detail-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin-bottom: 12px; }
+.editor-help { border-left: 2px solid var(--border); padding-left: 12px; margin: 12px 0 18px; overflow-wrap: anywhere; }
+.detail-section { border-top: 1px solid var(--border); padding-top: 16px; margin-top: 16px; }
+.detail-section h3 { margin-bottom: 10px; }
+.notes { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
+.annotation { padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); margin-top: 8px; }
+.annotation-header { display: flex; align-items: start; justify-content: space-between; gap: 8px; }
+.annotation h4 { margin: 0; font-size: 13px; font-weight: 550; overflow-wrap: anywhere; }
+.annotation-id { font-size: 11px; color: var(--muted-foreground); overflow-wrap: anywhere; margin: 3px 0 8px; }
+.annotation .metadata { margin-bottom: 0; }
+.annotation .notes { margin-top: 9px; }
+.annotation-search { margin: 12px 0; }
+.empty-state { display: grid; gap: 12px; padding: 24px 8px; }
+.notice { border: 1px solid var(--border); padding: 12px; margin-bottom: 16px; border-radius: var(--radius); color: var(--destructive); }
+.notice[hidden] { display: none; }
+.workspace-footer { border-top: 1px solid var(--border); padding-top: 14px; margin-top: 22px; }
+details { font-size: 12px; margin-top: 12px; }
+summary { cursor: var(--cursor-interaction, pointer); color: var(--muted-foreground); }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; padding: 10px; background: var(--card); border-radius: var(--radius); font-size: 11px; max-height: 360px; overflow: auto; }
+.btn { min-height: 32px; }
+@media (max-width: 980px) { .workspace-grid { grid-template-columns: minmax(140px,.65fr) minmax(240px,1.35fr); } .detail-pane { grid-column: 1 / -1; border-top: 1px solid var(--border); padding-top: 18px; } .item-pane { padding-right: 0; border-right: 0; } }
+@media (max-width: 560px) { .workspace { padding: 14px; } .workspace-grid { grid-template-columns: 1fr; } .project-pane { border-right: 0; border-bottom: 1px solid var(--border); padding: 0 0 14px; } .workspace-header { align-items: start; } .header-actions { flex-direction: column; align-items: end; gap: 5px; } }

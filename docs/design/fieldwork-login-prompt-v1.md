@@ -1,0 +1,17 @@
+# Fieldwork login concept
+
+Mode: built-in imagegen. Use case: `ui-mockup`.
+
+```text
+Use case: ui-mockup.
+Asset type: high-fidelity desktop login-screen design concept for Fieldwork, an aerial-imagery and roof-model review CRM.
+Primary request: A much nicer login screen with animated ASCII art and Google login. Show one polished still frame of the intended animation.
+Composition: 1440x1000 desktop application screen, no browser chrome. Asymmetric two-column full-viewport design. Left 42% is pale cool white (#f7f9fc), right 58% is deep surveying blue (#102b46). No floating login card. The right panel has very gently rounded left corners and 16px outer inset, like a large quiet illustration plate.
+Left: top left existing Fieldwork identity, small stacked-layer line icon and confident dark blue Fieldwork wordmark. Centered vertically within the left column, left-aligned form content with generous 64px gutters, small subtle layer icon above heading. Exact heading "Sign in to Fieldwork" in a modern humanist sans serif, clear 38px font with nice spacing. Exact supporting copy "Your imagery, models and feedback, in one workspace." in muted slate, at a comfortable reading width.
+One large white sign-in button with fine neutral border, official multicolour Google G at left, exact text "Continue with Google", dark text. Below it small muted lock icon and exact copy "Access is limited to invited accounts." Secondary text button "Connection settings" near the bottom of the form, not another prominent CTA. Quiet bottom-left footer "Fieldwork" and "Image review workspace".
+Right: compelling technically beautiful ASCII-art isometric neighbourhood. It MUST look made entirely of actual monospace text characters, such as + / backslash | : . - =, rather than smooth vector or photography. Four to six architecturally coherent pitched-roof houses, a street and a few trees rendered with delicate dense character stippling. One central L-shaped roof is highlighted with crisp pale cyan ASCII ridge and eave edges, muted periwinkle text for surrounding houses. Make geometry recognisable and precise, long straight roof ridges and simple planes. Create depth through text density and perspective. Broad negative space around the neighbourhood. A faint narrow cyan horizontal scanning band hints at the eventual animation. Subtle technical-character background fades toward edges. Bottom of art panel contains restrained small sentence "A closer look at the world around us." in pale slate.
+Style: calm professional geospatial design, considered typography (humanist sans serif for UI, fine monospace for ASCII), accessible contrast, exceptional spacing and craft, no gradients as ornament, no dashboard, no statistics, no badges, no arbitrary decorative labels, no email/password fields, no orange/acid-green accents. The ASCII illustration carries the personality; everything around it is simple and restrained.
+Output: one finished high-fidelity UI mockup, all content legible and fully inside frame.
+```
+
+Implementation direction: cool white #f7f9fc, surveying blue #102b46, slate #50667b, pale cyan #90e4ef and periwinkle #8198b9. Humanist system sans for controls, monospace for the native animated ASCII neighbourhood. Left-aligned, spacious sign-in form beside a full-height illustration plate. Roof geometry is the single expressive element; Google is the primary action. No metrics or marketing-card decoration.

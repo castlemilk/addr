@@ -1,0 +1,12 @@
+{
+  "snapshotId": "6d8811d04524eeb196c654ac3647fb32f11d14813f4ff58eb1fb5a747f238572",
+  "filesChecked": 14330,
+  "logicalBytes": 5618694792,
+  "allFileHashesMatch": true,
+  "allFileSizesMatch": true,
+  "allNanosecondMtimesMatch": true,
+  "extraFiles": 0,
+  "missingFiles": 0,
+  "symlinks": 0,
+  "scope": "Fresh CLI restore from full API pull; checked before analysis replay."
+}

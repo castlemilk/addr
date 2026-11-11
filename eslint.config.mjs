@@ -14,8 +14,16 @@ const eslintConfig = defineConfig([
   globalIgnores([
     // Default ignores of eslint-config-next:
     ".next/**",
+    ".run/**",
+    "data/**",
+    "**/.venv/**",
+    "**/.venv*/**", // suffixed venvs too (scripts/ml/training/.venv-sam3 ships vendored JavaScript)
+    "scripts/ml/.venv/**",
     "out/**",
     "build/**",
+    "apps/annotation-web/dist/**",
+    "deploy/annotation/.wrangler/**",
+    "deploy/annotation/node_modules/**",
     "next-env.d.ts",
     // Generated MapLibre worker assets copied by scripts/copy-maplibre-worker.mjs
     "public/maplibre/**",

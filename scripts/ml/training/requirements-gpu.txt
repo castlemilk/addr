@@ -1,0 +1,14 @@
+# Rented Linux GPU box (x86_64, NVIDIA driver >= 525, Python 3.12). Same versions as requirements-local.txt;
+# the CUDA 12.6 wheels are the newest CUDA-12 build published for torch 2.14.0 (checked 2026-09-27: cu126, cu130
+# and cu132 exist, cu128 does not). For a driver >= 580 you may switch the index to .../whl/cu130.
+# The GPU box never runs export_dataset (it receives the dataset tarball), so the export chain deps are absent.
+--extra-index-url https://download.pytorch.org/whl/cu126
+torch==2.14.0+cu126
+torchvision==0.29.0+cu126
+onnx==1.23.0
+onnxscript==0.7.2
+onnxruntime==1.30.0
+numpy==2.5.3
+shapely==2.1.2
+pillow==12.3.0
+scipy==1.18.1

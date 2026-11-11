@@ -218,7 +218,7 @@ def test_merge_sam3_polygons_replaces_and_adds():
 
     existing = [_square(0, 0), _square(100, 0)]
     proposals = [(_square(0.5, 0.5), 0.9), (_square(300, 300, 40.0), 0.8)]
-    merged = _merge_sam3_polygons(
+    merged, _ = _merge_sam3_polygons(
         existing,
         proposals,
         min_iou=0.3,
@@ -238,7 +238,7 @@ def test_merge_sam3_polygons_respects_add_gate_area():
     from scripts.ml.pipeline import _merge_sam3_polygons
 
     proposals = [(_square(300, 300, 4.0), 0.8)]
-    merged = _merge_sam3_polygons(
+    merged, _ = _merge_sam3_polygons(
         [],
         proposals,
         min_iou=0.3,
@@ -256,7 +256,7 @@ def test_merge_sam3_polygons_keeps_low_iou_base():
 
     existing = [_square(0, 0)]
     proposals = [(_square(200, 200), 0.9)]
-    merged = _merge_sam3_polygons(
+    merged, _ = _merge_sam3_polygons(
         existing,
         proposals,
         min_iou=0.3,
@@ -267,3 +267,94 @@ def test_merge_sam3_polygons_keeps_low_iou_base():
         add_max_area_m2=1500.0,
     )
     assert merged == existing
+
+
+def test_merge_sam3_polygons_drops_detections_without_evidence():
+    from scripts.ml.pipeline import _merge_sam3_polygons
+
+    existing = [_square(0, 0), _square(500, 500)]
+    proposals = [(_square(0.5, 0.5), 0.9)]
+    merged, dropped = _merge_sam3_polygons(
+        existing,
+        proposals,
+        min_iou=0.3,
+        meters_per_px=0.25,
+        add_detections=False,
+        add_score_threshold=0.6,
+        add_min_area_m2=10.0,
+        add_max_area_m2=1500.0,
+        min_evidence=0.2,
+    )
+    assert dropped == 1
+    assert len(merged) == 1
+    assert merged[0].centroid.x == 0.5
+
+
+def test_carve_contained_trees_splits_merged_blob():
+    from scripts.ml.footprints import LocalFootprint
+    from scripts.ml.pipeline import _carve_contained_trees
+    from shapely.geometry import box
+
+    building = LocalFootprint(
+        geometry=box(0, 0, 20, 10),
+        source="ml",
+        height=5.0,
+        area_m2=200.0,
+        kind="building",
+        roof_type="gabled",
+        eave_height=3.0,
+        ridge_height=6.0,
+    )
+    contained_canopy = LocalFootprint(
+        geometry=box(1, 1, 6, 9), source="ml", height=6.0, area_m2=40.0, kind="tree"
+    )
+    overhanging = LocalFootprint(
+        geometry=box(18, -1, 30, 11), source="ml", height=6.0, area_m2=100.0, kind="tree"
+    )
+    carved, count = _carve_contained_trees(
+        [building],
+        [contained_canopy, overhanging],
+        meters_per_local=0.12,
+        meters_per_px=0.24,
+    )
+    assert count == 1
+    assert len(carved) == 1
+    assert carved[0].geometry.area < building.geometry.area
+    assert carved[0].geometry.intersection(contained_canopy.geometry).area < 1.0
+
+
+def test_tile_quality_stats():
+    from scripts.ml.footprints import LocalFootprint
+    from scripts.ml.pipeline import tile_quality_stats
+    from shapely.geometry import box
+
+    buildings = [
+        LocalFootprint(geometry=box(0, 0, 10, 10), source="ml", area_m2=100.0, height=4.0),
+        LocalFootprint(geometry=box(20, 0, 30, 10), source="ml", area_m2=300.0, height=6.0),
+    ]
+    trees = [LocalFootprint(geometry=box(0, 20, 5, 25), source="ml", area_m2=25.0, height=8.0)]
+    stats = tile_quality_stats(buildings, trees)
+    assert stats == {"buildings": 2, "trees": 1, "avg_area_m2": 200.0, "avg_height_m": 5.0}
+
+
+def test_map_tile_inference_uses_the_same_straight_roof_envelope(tmp_path):
+    from scripts.ml.pipeline import _building_footprints
+    from scripts.ml.roof_surface import refine_roof_surface
+    from scripts.ml.segmentation import mask_to_polygons
+    from shapely.geometry import Polygon
+
+    window = _synthetic_window(size=256)
+    window.tile_span_meters = 25.6
+    mask = np.zeros((256, 256), dtype=bool)
+    mask[40:150, 40:210] = True
+    for x in range(40, 210, 4):
+        mask[40:42, x:x+2] = False
+    cfg = _tree_config(tmp_path, simplify_px=0)
+    raw, = mask_to_polygons(mask, min_area_px=8, simplify_px=0)
+    frame = np.array([[.1, 0], [0, -.1], [0, 0]])
+    expected, _ = refine_roof_surface(raw, window.image, frame)
+    footprints, _ = _building_footprints(cfg, window, mask, None)
+    result, = footprints
+    pixels = Polygon([window.local_to_pixel(*p) for p in result.geometry.exterior.coords])
+    assert len(pixels.exterior.coords) < len(raw.exterior.coords)/4
+    assert pixels.symmetric_difference(expected).area < 1e-5

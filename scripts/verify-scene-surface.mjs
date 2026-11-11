@@ -1,0 +1,84 @@
+import assert from 'node:assert/strict';
+import {readFile,writeFile,mkdir,cp,rm} from 'node:fs/promises';
+import puppeteer from 'puppeteer-core';
+const base=process.env.APP_URL||'http://localhost:3008',id=`qa_surface_${Date.now()}`,directory=`data/scenes/${id}`;
+const original=JSON.parse(await readFile('data/scenes/map-a31010822250fb97/latest.json','utf8'));
+const model={...original,id,groups:[],objects:original.objects.filter(o=>o.id==='e548165f7784e92c').map(o=>({...o,parent_id:undefined,group_id:undefined}))};
+assert.equal(model.objects.length,1);
+await mkdir(directory);await writeFile(`${directory}/latest.json`,JSON.stringify(model));
+await cp(`data/scenes/map-a31010822250fb97/${model.image_sha256}.png`,`${directory}/${model.image_sha256}.png`);
+const browser=await puppeteer.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true,args:['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+const page=await browser.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+await page.setViewport({width:1500,height:1080});
+const button=async text=>(await page.waitForSelector(`button::-p-text(${text})`)).click();
+const load=async()=>(await fetch(`${base}/api/scenes?id=${id}`)).json();
+const reviewed=data=>data.review.objects.find(o=>o.id===model.objects[0].id);
+const input=async(label,value)=>{
+ const field=await page.$(`input[aria-label="${label}"]`);await field.focus();await field.evaluate(e=>e.select());await field.press('Backspace');await field.type(String(value));await field.press('Tab');
+ await page.waitForFunction((l,v)=>document.querySelector(`input[aria-label="${l}"]`)?.value===v,{},label,String(value));
+};
+const saved=async revision=>{
+ await page.waitForFunction(r=>document.body.textContent.includes(`Saved revision ${r}`)||document.querySelector('.scene-status-space [role="alert"]')?.textContent,{},revision);
+ assert(!await page.$eval('body',e=>e.querySelector('.scene-status-space [role="alert"]')?.textContent));
+};
+try {
+ const seed=await fetch(`${base}/api/scenes`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,review:{revision:0,model_signature:model.model_signature,groups:[],reviewed_classes:['road'],objects:model.objects.map(o=>({...o,status:'confirmed',geometry_reviewed:true}))}})});
+ assert.equal(seed.status,200,await seed.clone().text());
+ await page.goto(`${base}/scenes?scene=${id}&kind=road&status=all`,{waitUntil:'networkidle2'});
+ await page.waitForSelector('.scene-surface-controls');
+ const initialBearing=await page.$eval('input[aria-label="Surface direction"]',e=>e.value);
+ const initialArrow=await page.$eval('g[aria-label^="Surface grade direction"]',e=>e.getAttribute('aria-label'));
+ const initialRange=await page.$eval('.scene-surface-range',e=>e.textContent);
+ await page.focus('select[aria-label="Surface cross-section"]');await page.keyboard.press('Tab');
+ assert.equal(await page.evaluate(()=>document.activeElement?.getAttribute('aria-label')),'Surface direction');
+ await input('Surface direction',212.5);await input('Surface grade (%)',-3.75);await input('Surface crossfall (%)',2.25);
+ await page.select('select[aria-label="Surface cross-section"]','crowned');
+ assert.equal(await page.$eval('g[aria-label^="Surface grade direction"]',e=>e.getAttribute('aria-label')),'Surface grade direction 213 degrees');
+ const editedRange=await page.$eval('.scene-surface-range',e=>e.textContent);assert.notEqual(editedRange,initialRange);
+ await button('Prediction');
+ await page.waitForFunction(v=>document.querySelector('input[aria-label="Surface direction"]')?.value===v,{},initialBearing);
+ assert(await page.$eval('input[aria-label="Surface grade (%)"]',e=>e.matches(':disabled')));
+ assert.equal(await page.$eval('input[aria-label="Surface grade (%)"]',e=>e.value),'0');
+ assert.equal(await page.$eval('.scene-surface-range',e=>e.textContent),initialRange);
+ assert.equal(await page.$eval('g[aria-label^="Surface grade direction"]',e=>e.getAttribute('aria-label')),initialArrow);
+ await button('Your edits');
+ await page.setRequestInterception(true);let fail=true;
+ page.on('request',request=>{
+  if(fail&&request.method()==='POST'&&request.url()===`${base}/api/scenes`){fail=false;void request.respond({status:503,contentType:'application/json',body:JSON.stringify({error:'Test interruption. Surface edits are retained.'})});}
+  else void request.continue();
+ });
+ await button('Save scene');await page.waitForFunction(()=>document.querySelector('.scene-status-space [role="alert"]')?.textContent.includes('Surface edits'));
+ assert.equal(await page.$eval('input[aria-label="Surface grade (%)"]',e=>e.value),'-3.75');
+ await button('Save scene');await saved(2);
+ await page.reload({waitUntil:'networkidle2'});await page.waitForSelector('.scene-surface-controls');
+ let data=await load();
+ assert.deepEqual(reviewed(data).model.surface,{profile:'crowned',grade_percent:-3.75,crossfall_percent:2.25,heading_deg:212.5});
+ assert.equal(reviewed(data).model.height_verified,false);assert.equal(reviewed(data).geometry_reviewed,true);
+ assert.deepEqual(data.review.reviewed_classes,['road'],'3D edits retain complete class/outline approval');
+ assert.deepEqual(data.model,JSON.parse(JSON.stringify(model)));
+ assert.equal(await page.$eval('.scene-surface-range',e=>e.textContent),editedRange);
+ await button('3D scene');await page.waitForSelector('.scene-3d-canvas canvas');await button('Isolate object');
+ await page.waitForSelector('button::-p-text(Show surroundings)');await page.screenshot({path:'/tmp/addr-surface-3d.png'});
+ await button('Aerial');await button('Level surface');
+ await page.waitForFunction(()=>document.querySelector('input[aria-label="Surface grade (%)"]')?.value==='0');
+ assert.equal(await page.$eval('.scene-surface-range',e=>e.textContent),initialRange);
+ await button('Undo edit');await page.waitForFunction(()=>document.querySelector('input[aria-label="Surface grade (%)"]')?.value==='-3.75');
+ await button('Follow outline direction');await button('Save scene');await saved(3);
+ data=await load();assert.equal(reviewed(data).model.surface.heading_deg,undefined);assert.deepEqual(data.review.reviewed_classes,['road']);
+ await button('Edit outline');await page.select('select[aria-label="Select outline point"]','0');
+ const x=Number(await page.$eval('input[aria-label="Outline point X"]',e=>e.value));await input('Outline point X',x+.1);
+ await button('Save scene');await saved(4);
+ data=await load();assert.deepEqual(data.review.reviewed_classes,[],'Outline edits invalidate layer approval');assert.equal(reviewed(data).geometry_reviewed,false);
+ await button('Undo last save');await saved(5);assert.deepEqual((await load()).review.reviewed_classes,['road']);
+ await page.select('.scene-inspector select','tree');await button('Save scene');await saved(6);
+ assert.equal(reviewed(await load()).model.surface,undefined,'Non-pavement classes cannot retain slope controls');
+ await button('Undo last save');await saved(7);
+ await mkdir(`${directory}/models`);await writeFile(`${directory}/models/${model.model_signature}.json`,JSON.stringify(model));
+ const newer={...model,model_signature:'b'.repeat(64)};await writeFile(`${directory}/models/${newer.model_signature}.json`,JSON.stringify(newer));await writeFile(`${directory}/latest.json`,JSON.stringify(newer));
+ await page.reload({waitUntil:'networkidle2'});await button('Preview earlier edits');await button('Carry edits forward');await saved(8);
+ data=await load();assert.equal(reviewed(data).model.surface.grade_percent,-3.75);assert.equal(reviewed(data).status,'needs_adjustment');assert.deepEqual(data.review.reviewed_classes,[]);
+ await page.setViewport({width:390,height:844});await page.$eval('.scene-surface-controls',e=>e.scrollIntoView());await page.screenshot({path:'/tmp/addr-surface-mobile.png'});
+ assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));assert.deepEqual(errors,[]);
+ console.log('Scene surfaces: decimal slope/direction/crossfall, crown, arrows, elevation range, immutable prediction, outline-approval preservation/invalidation, failed-save recovery, save/reload, undo, class changes, carry-forward, 3D and mobile passed.');
+}catch(error){console.error(await page.$eval('body',e=>e.innerText.slice(-5000)));await page.screenshot({path:'/tmp/addr-surface-failure.png',fullPage:true});throw error;}
+finally{await browser.close();await rm(directory,{recursive:true,force:true});}

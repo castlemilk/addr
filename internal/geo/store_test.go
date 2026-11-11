@@ -104,3 +104,70 @@ func TestStoreQueries(t *testing.T) {
 		}
 	})
 }
+
+func TestReverseGeocodeReturnsNearestAddress(t *testing.T) {
+	// Go 1.27 structured test attribute
+	t.Attr("tier", "integration")
+	t.Attr("db", "sqlite")
+
+	dbPath := filepath.Join("..", "..", "data", "australia_geo.db")
+	store, err := geo.NewStore(dbPath)
+	if err != nil {
+		t.Skipf("skipping integration test: database not found at %s: %v", dbPath, err)
+	}
+	defer store.Close()
+
+	// 27 Cambridge Road pin: a dense area where the old LIMIT 50 truncated
+	// candidates before distance ordering and returned arbitrary addresses.
+	res, err := store.ReverseGeocode(context.Background(), -37.79044, 145.31252, 250.0)
+	if err != nil {
+		t.Fatalf("ReverseGeocode failed: %v", err)
+	}
+	if res.Address == nil {
+		t.Fatalf("expected an address match, got nil")
+	}
+	if res.Address.ID != 29790 {
+		t.Fatalf("expected address id 29790 (27 Cambridge Road), got %d (%s)", res.Address.ID, res.Address.FullAddress)
+	}
+}
+
+func TestReverseGeocodeDoesNotJoinDistantPoi(t *testing.T) {
+	// Go 1.27 structured test attribute
+	t.Attr("tier", "integration")
+	t.Attr("db", "sqlite")
+
+	dbPath := filepath.Join("..", "..", "data", "australia_geo.db")
+	store, err := geo.NewStore(dbPath)
+	if err != nil {
+		t.Skipf("skipping integration test: database not found at %s: %v", dbPath, err)
+	}
+	defer store.Close()
+
+	// Pin sits on 27 Cambridge Road's point; LKPT Fitness (29 Cambridge Rd)
+	// is ~42m away and must not headline the result as poi_and_address.
+	res, err := store.ReverseGeocode(context.Background(), -37.79044, 145.31252, 250.0)
+	if err != nil {
+		t.Fatalf("ReverseGeocode failed: %v", err)
+	}
+	if res.MatchType != "address_only" {
+		t.Fatalf("expected match type address_only, got %q", res.MatchType)
+	}
+	if res.Place != nil {
+		t.Fatalf("expected no headline POI, got %s", res.Place.Name)
+	}
+
+	// Tapping the POI itself joins it with its own street number (29).
+	poiRes, err := store.ReverseGeocode(context.Background(), -37.79051399230957, 145.31298828125, 250.0)
+	if err != nil {
+		t.Fatalf("ReverseGeocode failed: %v", err)
+	}
+	if poiRes.MatchType != "poi_and_address" {
+		t.Fatalf("expected match type poi_and_address, got %q", poiRes.MatchType)
+	}
+	if poiRes.Place == nil || poiRes.Place.Name != "LKPT Fitness" {
+		t.Fatalf("expected LKPT Fitness headline POI, got %+v", poiRes.Place)
+	}
+	if poiRes.Address == nil || poiRes.Address.Number == nil || *poiRes.Address.Number != "29" {
+		t.Fatalf("expected a 29 Cambridge Road address, got %+v", poiRes.Address)
+	}
+}

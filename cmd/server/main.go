@@ -15,8 +15,11 @@ import (
 	"syscall"
 	"time"
 
+	"connectrpc.com/connect"
 	connectcors "connectrpc.com/cors"
+	crmv1connect "github.com/benebsworth/addr/gen/go/crm/v1/crmv1connect"
 	"github.com/benebsworth/addr/gen/go/geo/v1/geov1connect"
+	"github.com/benebsworth/addr/internal/crm"
 	"github.com/benebsworth/addr/internal/geo"
 	"github.com/benebsworth/addr/internal/service"
 	"github.com/benebsworth/addr/internal/tile"
@@ -49,6 +52,7 @@ func run(ctx context.Context, args []string, getenv func(string) string, stdout,
 		tileCacheMB          = fs.Int64("tile-cache-mb", 256, "Tile in-memory LRU cache size in MB")
 		tileGeneratorURL     = fs.String("tile-generator-url", "", "Base URL of the realtime AI tile generation service (e.g. http://localhost:8090)")
 		tileGeneratorTimeout = fs.Duration("tile-generator-timeout", 120*time.Second, "Timeout for realtime tile generation requests")
+		crmNoAuth            = fs.Bool("crm-noauth", false, "Disable CRM API-key auth: unauthenticated requests run as local admin (loopback dev only, never in prod)")
 	)
 
 	if err := fs.Parse(args); err != nil {
@@ -77,6 +81,14 @@ func run(ctx context.Context, args []string, getenv func(string) string, stdout,
 			*tileGeneratorTimeout = timeout
 		}
 	}
+	if envNoAuth := getenv("CRM_NOAUTH"); envNoAuth != "" {
+		switch envNoAuth {
+		case "1", "true", "TRUE", "yes", "YES":
+			*crmNoAuth = true
+		case "0", "false", "FALSE", "no", "NO":
+			*crmNoAuth = false
+		}
+	}
 
 	logger := slog.New(slog.NewJSONHandler(stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	slog.SetDefault(logger)
@@ -94,6 +106,23 @@ func run(ctx context.Context, args []string, getenv func(string) string, stdout,
 	// Mount Connect-Go service handler
 	path, handler := geov1connect.NewGeoServiceHandler(geoServer)
 	mux.Handle(path, handler)
+
+	// Mount per-address CRM (RBAC enforced per RPC via the auth interceptor)
+	if crmStore, crmErr := crm.NewStore(*dbPath); crmErr != nil {
+		slog.Warn("CRM store unavailable; CRM RPCs disabled", "error", crmErr)
+	} else {
+		defer crmStore.Close()
+		crmServer := crm.NewServer(crmStore)
+		crmPath, crmHandler := crmv1connect.NewCrmServiceHandler(
+			crmServer,
+			connect.WithInterceptors(crm.NewAuthInterceptor(crmStore, *crmNoAuth)),
+		)
+		mux.Handle(crmPath, crmHandler)
+		slog.Info("CRM engine enabled", "path", crmPath)
+		if *crmNoAuth {
+			slog.Warn("CRM API-key auth disabled: unauthenticated requests run as local admin (dev only)")
+		}
+	}
 
 	// Mount in-memory LRU vector tile store
 	tileStore, err := tile.NewStore(*mbtilesPath, *tileCacheMB*1024*1024)
@@ -125,7 +154,7 @@ func run(ctx context.Context, args []string, getenv func(string) string, stdout,
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins: []string{"*"},
 		AllowedMethods: connectcors.AllowedMethods(),
-		AllowedHeaders: connectcors.AllowedHeaders(),
+		AllowedHeaders: append(connectcors.AllowedHeaders(), "Authorization"),
 		ExposedHeaders: connectcors.ExposedHeaders(),
 		MaxAge:         7200,
 	})

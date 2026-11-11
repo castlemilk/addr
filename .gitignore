@@ -46,7 +46,14 @@ scripts/ml/models/**/*.onnx
 scripts/ml/models/**/*.data
 __pycache__/
 .pytest_cache/
-data/imagery/
+
+# data/ is local-only pipeline state (imagery, tiles, scenes, reviews — see
+# docs/data-and-models.md). Nothing under data/ is tracked except each
+# imagery source's provenance.json manifest.
+data/*
+!data/imagery/
+data/imagery/*/*
+!data/imagery/*/provenance.json
 data/previews/
 
 # runtime state
@@ -58,3 +65,45 @@ public/maplibre/
 
 # generated per-address roof records (task addresses)
 public/address-roofs.json
+data/reviews/
+data/*_prev.mbtiles
+data/training/
+
+# compiled binaries — rebuild with task build / go build ./cmd/<name>
+/bin/
+/crmctl
+/annotation-server
+/annotationctl
+
+# standalone annotation build and deployment outputs
+/apps/annotation-web/dist/
+/deploy/annotation/.wrangler/
+/deploy/annotation/node_modules/
+/data/annotation-snapshots/
+/data/fieldwork-sync/
+/data/reviews/fieldwork-feedback/
+
+# SAM3 on Mac: vendored fork, its venv, and gated weights (pinned in scripts/ml/training/sam3_mac/VENDOR.json)
+scripts/ml/training/vendor/
+scripts/ml/training/.venv/
+scripts/ml/training/.venv-sam3/
+scripts/ml/models/sam3-hf/
+# teacher imagery caches: everything under each source folder except its provenance.json
+data/imagery/*/*
+!data/imagery/*/provenance.json
+# LINZ 1 m DSM/DEM tile cache (teacher-elevation-v1; CC BY 4.0 tiles, sha256-verified against STAC, re-fetchable with task eyes:teacher-elevation)
+data/elevation/linz-chc-1m/
+
+# Harness² runs, contexts and case snapshots (scripts/ml/harnessing)
+data/harness/
+
+# external reference checkouts (not our code — clone on demand)
+docs/Roofline-extraction-from-orthophotos/
+
+# agent/editor local state
+.serena/
+.playwright-mcp/
+.pnpm-store/
+.claude/settings.local.json
+.claude/.headroom_wrap_settings.lock
+/*.ses

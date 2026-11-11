@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Address reviews</title>
+    <!-- MCP_APP_STYLES -->
+  </head>
+  <body>
+    <main class="workspace">
+      <header class="workspace-header">
+        <span class="product-name">addr</span>
+        <h1>Address reviews</h1>
+        <p class="text-muted">Inspect saved roofs and feedback, record source-bound agent observations, and add resources to your chat.</p>
+      </header>
+      <form id="search-form" role="search" class="search-form">
+        <label class="sr-only" for="query">Search addresses and scenes</label>
+        <input id="query" class="form-control" type="search" maxlength="200" placeholder="Search an address, suburb or scene ID" autocomplete="off" disabled>
+        <button id="search-button" class="btn" type="button" disabled>Search</button>
+      </form>
+      <button id="queue-button" class="btn queue-button" type="button" disabled>Low-evidence roof queue</button>
+      <div class="result-toolbar">
+        <div class="filters" role="group" aria-label="Resource type">
+          <button class="filter" type="button" data-kind="all" aria-pressed="true">All</button>
+          <button class="filter" type="button" data-kind="addresses" aria-pressed="false">Addresses</button>
+          <button class="filter" type="button" data-kind="scenes" aria-pressed="false">Scenes</button>
+        </div>
+        <span id="result-count" class="text-muted text-small"></span>
+      </div>
+      <p id="list-status" class="status text-muted" role="status" aria-live="polite">Opening address reviews…</p>
+      <div class="panes">
+        <section class="resource-pane" aria-label="Search results">
+          <ul id="resources" class="resource-list"></ul>
+        </section>
+        <section id="detail" class="detail-pane" aria-label="Resource details" aria-live="polite">
+          <div class="detail-placeholder">
+            <h2>Select an address or scene</h2>
+            <p class="text-muted">View its saved model estimate and choose what to add to your chat.</p>
+          </div>
+        </section>
+      </div>
+      <p id="attachment-status" class="attachment-status text-muted text-small" role="status" aria-live="polite"></p>
+    </main>
+    <!-- MCP_APP_SCRIPT -->
+  </body>
+</html>

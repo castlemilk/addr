@@ -1,0 +1,42 @@
+{
+  "baseline": {
+    "concurrency": 8,
+    "counts": {
+      "*pq.Error": 63,
+      "success": 33
+    },
+    "elapsed_ms": 25164,
+    "max_ms": 10913,
+    "median_ms": 1343,
+    "min_ms": 261,
+    "read_only_calls": "Service.GetItem; OpenStore migrations=false",
+    "requests": 96,
+    "started_at": "2026-09-27T05:04:28Z"
+  },
+  "after_fix": {
+    "concurrency": 8,
+    "counts": {
+      "success": 96
+    },
+    "elapsed_ms": 15895,
+    "max_ms": 4932,
+    "median_ms": 986,
+    "min_ms": 300,
+    "read_only_calls": "Service.GetItem; OpenStore migrations=false",
+    "requests": 96,
+    "started_at": "2026-09-27T05:06:28Z"
+  },
+  "baseline_errors_by_stage": {
+    "store_get": 33,
+    "list_labels": 30
+  },
+  "baseline_errors_by_sqlstate": {
+    "08P01": 62,
+    "26000": 1
+  },
+  "after_diagnostic_bytes": 0,
+  "fix": "lib/pq Config.BinaryParameters=true through native DSN parser and connector",
+  "database_changes": "None from probes: OpenStore migrations=false and Service.GetItem only",
+  "guidance": "https://neon.com/docs/connect/connection-pooling",
+  "driver_source": "github.com/lib/pq v1.12.3 connector.go Config.BinaryParameters; conn.go sendBinaryModeQuery"
+}

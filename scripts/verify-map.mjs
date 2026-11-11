@@ -1,7 +1,7 @@
 import puppeteer from "puppeteer-core";
 import { mkdirSync } from "node:fs";
 
-const url = process.env.APP_URL || "http://localhost:3004";
+const url = process.env.APP_URL || "http://localhost:3008";
 const chrome =
   process.env.CHROME_PATH || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const outDir = process.env.SHOT_DIR || "/tmp/addr-verify";
@@ -31,6 +31,9 @@ page.on("console", (message) => {
 });
 page.on("request", (request) => {
   if (request.url().includes("/tiles/")) tileRequests.push(request.url());
+});
+page.on("response", response => {
+  if (response.status() >= 400) console.log(`HTTP ${response.status()}: ${response.url()}`);
 });
 
 await page.goto(url, { waitUntil: "networkidle2", timeout: 120000 });

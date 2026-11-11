@@ -157,7 +157,7 @@ def load_existing_footprints(
     data = row[0]
     if data[:2] == b"\x1f\x8b":
         data = gzip.decompress(data)
-    layers = mapbox_vector_tile.decode(data)
+    layers = mapbox_vector_tile.decode(data, default_options={"y_coord_down": True})
     layer = layers.get("building")
     if not layer:
         return []

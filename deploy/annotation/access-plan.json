@@ -1,0 +1,187 @@
+{
+  "status": "provisioned_and_worker_deployed",
+  "user_approval": {
+    "date": "2026-10-06",
+    "instruction": "yes proceed, the oauth flow should get a user in, then there should be automatic refresh tokens etc",
+    "covers": "The proposed owner-only one-hour Access provider, reusable policy, scoped application, and Worker activation."
+  },
+  "remote_mutations_performed": true,
+  "account_id": "2132ccf47ceb5fff234c34d85490470a",
+  "worker": "addr-crm-mcp",
+  "purpose": "Replace the workspace-token OAuth consent form with Cloudflare account sign-in for the Addr CRM owner.",
+  "scope": {
+    "application_type": "self_hosted",
+    "hostname": "addr-crm-mcp.ben-ebsworth.workers.dev",
+    "path": "/authorize",
+    "path_matching": "Access hostname/path applications cover this path and inherited descendant paths. The Worker handles exactly /authorize; descendant paths do not provide consent. No hostname-wide or Worker-wide Access application is proposed.",
+    "owner_email": "ben.ebsworth@gmail.com",
+    "session_duration": "1h",
+    "login_provider": "Cloudflare account sign-in",
+    "require_cloudflare_account_membership": true,
+    "unaffected_paths": [
+      "/mcp",
+      "/oauth/token",
+      "/oauth/register",
+      "/.well-known/oauth-authorization-server",
+      "/.well-known/oauth-protected-resource/mcp"
+    ]
+  },
+  "read_only_account_observations": {
+    "source": "Existing authorized read-only Cloudflare API checks reported by the parent agent.",
+    "applications": {
+      "http_status": 200,
+      "success": true,
+      "count": 0
+    },
+    "identity_providers": {
+      "http_status": 200,
+      "success": true,
+      "count": 0
+    },
+    "reusable_policies": {
+      "http_status": 200,
+      "success": true,
+      "count": 0
+    },
+    "organization": {
+      "http_status": 403,
+      "error_code": 10000,
+      "message": "Authentication error",
+      "existence": "unverified",
+      "interpretation": "The credential could not read the Zero Trust organization. A 403 does not establish that the organization is absent."
+    }
+  },
+  "prerequisites": [
+    "Explicit user approval was received for this exact account, owner, authorization path, and one-hour session before Access mutation.",
+    "Verify the existing Zero Trust organization with an account-authorized credential or the Cloudflare dashboard. Do not create or change organization-wide settings under this plan.",
+    "Confirm ben.ebsworth@gmail.com is a member of this Cloudflare account; otherwise the restricted Cloudflare identity provider must deny sign-in.",
+    "Re-read applications, identity providers, and policies immediately before approved creation to avoid duplicates or conflicting path applications. Reuse a suitable existing Cloudflare provider only if config.restrict_to_account_members is true; do not alter a shared provider."
+  ],
+  "api_permissions": {
+    "organization_and_identity_provider_read": "Access: Organizations, Identity Providers, and Groups Read",
+    "identity_provider_create": "Access: Organizations, Identity Providers, and Groups Write",
+    "application_and_policy_create": "Access: Apps and Policies Write",
+    "account_scope": "Only account 2132ccf47ceb5fff234c34d85490470a",
+    "credentials": "Use the existing authorized local credential mechanism or dashboard; no credentials belong in this plan or chat."
+  },
+  "proposed_requests_after_approval": [
+    {
+      "step": 1,
+      "condition": "Only if no suitable restricted Cloudflare identity provider exists, and after organization access is verified.",
+      "method": "POST",
+      "url": "https://api.cloudflare.com/client/v4/accounts/2132ccf47ceb5fff234c34d85490470a/access/identity_providers",
+      "body": {
+        "name": "Addr CRM Cloudflare account sign-in",
+        "type": "cloudflare",
+        "config": {
+          "restrict_to_account_members": true
+        }
+      },
+      "generated_id": "<CLOUDFLARE_IDENTITY_PROVIDER_ID>"
+    },
+    {
+      "step": 2,
+      "method": "POST",
+      "url": "https://api.cloudflare.com/client/v4/accounts/2132ccf47ceb5fff234c34d85490470a/access/policies",
+      "body": {
+        "name": "Addr CRM OAuth owner (1 hour)",
+        "decision": "allow",
+        "include": [
+          {
+            "email": {
+              "email": "ben.ebsworth@gmail.com"
+            }
+          }
+        ],
+        "require": [
+          {
+            "login_method": {
+              "id": "<CLOUDFLARE_IDENTITY_PROVIDER_ID>"
+            }
+          }
+        ],
+        "exclude": [],
+        "session_duration": "1h"
+      },
+      "generated_id": "<OWNER_ONLY_POLICY_ID>"
+    },
+    {
+      "step": 3,
+      "method": "POST",
+      "url": "https://api.cloudflare.com/client/v4/accounts/2132ccf47ceb5fff234c34d85490470a/access/apps",
+      "body": {
+        "name": "Addr CRM OAuth authorization",
+        "type": "self_hosted",
+        "domain": "addr-crm-mcp.ben-ebsworth.workers.dev/authorize",
+        "destinations": [
+          {
+            "type": "public",
+            "uri": "addr-crm-mcp.ben-ebsworth.workers.dev/authorize"
+          }
+        ],
+        "session_duration": "1h",
+        "allowed_idps": [
+          "<CLOUDFLARE_IDENTITY_PROVIDER_ID>"
+        ],
+        "auto_redirect_to_identity": true,
+        "allow_authenticate_via_warp": false,
+        "app_launcher_visible": false,
+        "policies": [
+          {
+            "id": "<OWNER_ONLY_POLICY_ID>",
+            "precedence": 1
+          }
+        ]
+      },
+      "generated_id": "<ACCESS_APPLICATION_ID>",
+      "generated_audience": "<ACCESS_APPLICATION_AUD>"
+    }
+  ],
+  "worker_activation_after_access_verification": {
+    "vars": {
+      "FIELDWORK_OWNER_EMAIL": "ben.ebsworth@gmail.com",
+      "ACCESS_AUD": "<ACCESS_APPLICATION_AUD>"
+    },
+    "audience_source": "Use the created application's result.aud, not its UUID or a fabricated value.",
+    "identity_source": "The replacement /authorize handler requires trusted ctx.access, an exact audience match, and ctx.access.getIdentity().email matching the owner. No additional production Wrangler access.dev configuration is needed.",
+    "deployment": "Deploy the prepared account-only consent handler only after the approved Access application and its audience have been verified."
+  },
+  "verification_after_approved_activation": [
+    "GET the created identity provider, reusable policy, and application; verify restricted membership, the single owner email, required login method, identical one-hour durations, one /authorize destination, and only the intended policy link.",
+    "Verify an unauthenticated /authorize request requires Cloudflare sign-in and does not show a workspace-token form.",
+    "Verify the owner can sign in and authorize; a different identity or a request lacking trusted Access context cannot authorize.",
+    "Verify /mcp and OAuth discovery, client registration, and token exchange retain their OAuth behavior without an Access HTML login redirect.",
+    "Run an end-to-end Codex/Dot connection after owner consent, with read-only tool calls only."
+  ],
+  "approval_request": "Approve creating the Cloudflare account sign-in provider restricted to this account if needed, one reusable allow policy for ben.ebsworth@gmail.com only, and one self-hosted Access application limited to addr-crm-mcp.ben-ebsworth.workers.dev/authorize with one-hour sessions, then activating the prepared Worker consent handler with its actual audience. This approval does not include creating or changing the Zero Trust organization.",
+  "prior_automatic_approval_rejection": {
+    "action": "POST an Access allow policy with a 24-hour session",
+    "reason": "This would persistently change the Cloudflare Access authorization boundary by creating an allow policy, but the user has not explicitly approved this exact account policy, scope, and 24-hour session setting; moreover, no existing Access application or identity provider was found to show the policy\u2019s actual target.",
+    "handling": "No retry or workaround occurred before approval. The user subsequently explicitly approved this narrower one-hour plan; activation is waiting for Cloudflare account management authentication."
+  },
+  "official_sources": [
+    "https://developers.cloudflare.com/cloudflare-one/integrations/identity-providers/cloudflare/",
+    "https://developers.cloudflare.com/api/resources/zero_trust/subresources/access/subresources/policies/methods/create/",
+    "https://developers.cloudflare.com/api/resources/zero_trust/subresources/access/subresources/applications/methods/create/",
+    "https://developers.cloudflare.com/cloudflare-one/access-controls/policies/",
+    "https://developers.cloudflare.com/cloudflare-one/access-controls/policies/app-paths/",
+    "https://developers.cloudflare.com/api/resources/zero_trust/subresources/organizations/methods/list/",
+    "https://developers.cloudflare.com/workers/configuration/cloudflare-access/"
+  ],
+  "actual_resources": {
+    "identity_provider_id": "6577b692-d77c-4173-90c2-a0e1669fcef6",
+    "policy_id": "f2d2bca1-0db0-47d6-8007-49803346d331",
+    "application_id": "e2797db8-b2db-428e-ab1a-c4e24c1aa1ac",
+    "audience": "8ad9f6e476e5fe5131cd5196526da12d3a267a6cee76ac82aec0a627d787dc6a",
+    "worker_version": "7e1a5441-8401-486a-b4ca-22d1575db4eb"
+  },
+  "authenticated_account_observations": {
+    "organization": "Greenveil",
+    "auth_domain": "greenveil.cloudflareaccess.com",
+    "application_count_before": 3,
+    "identity_provider_count_before": 2,
+    "reusable_policy_count_before": 2,
+    "organization_settings_changed": false,
+    "source": "Scoped cf account OAuth profile; initial Wrangler observations did not enumerate existing Access resources."
+  }
+}

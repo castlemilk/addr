@@ -1,0 +1,45 @@
+{
+  "snapshotId": "6d8811d04524eeb196c654ac3647fb32f11d14813f4ff58eb1fb5a747f238572",
+  "projectCount": 4,
+  "importedProjectCount": 1,
+  "preservedExistingProjectCount": 3,
+  "allExistingProjectsUnchanged": true,
+  "labelCount": 10,
+  "itemCount": 507,
+  "sceneCount": 506,
+  "reportCount": 1,
+  "allItemsIndependentlyGETVerified": true,
+  "exactProjectedDocumentParity": true,
+  "annotationCount": 43316,
+  "reviewSceneCount": 143,
+  "staleReviewSceneCount": 0,
+  "preservedInteriorRings": 4416,
+  "itemStatuses": {
+    "in_review": 143,
+    "unreviewed": 363
+  },
+  "sourceObjectStatuses": {
+    "candidate": 42775,
+    "confirmed": 296,
+    "needs_adjustment": 90,
+    "superseded": 35,
+    "rejected": 120
+  },
+  "sourceClasses": {
+    "tree": 14481,
+    "road": 750,
+    "car": 834,
+    "building": 18348,
+    "solar_panel": 4378,
+    "driveway": 913,
+    "footpath": 732,
+    "vegetation": 2349,
+    "pool": 297,
+    "water": 234
+  },
+  "machineTaggedObjects": 97,
+  "machineConfirmedObjects": 97,
+  "humanApprovalIntroduced": false,
+  "canonicalReportRoofCount": 10339,
+  "verificationNote": "Initial independent reads used bounded retries because of a pooled PostgreSQL protocol error. The cause was fixed and the same bounded 64-read reproduction then passed with no retries; see production-protocol-fix-verification.json. Data parity and revision history remained unchanged."
+}

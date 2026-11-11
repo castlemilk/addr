@@ -1,0 +1,112 @@
+{
+  "origin": "https://fieldwork-annotations.ben-ebsworth.workers.dev",
+  "date": "2026-09-27",
+  "scope": "temporary owned item and label in example-fieldwork, removed after verification",
+  "mcpTools": 14,
+  "phoneViewport": [
+    390,
+    844
+  ],
+  "phoneOverflow": false,
+  "phoneSaveAndReload": {
+    "revision": 2,
+    "noteMatched": true,
+    "incrementalChanges": 1
+  },
+  "mcpLabelAndLineWrite": {
+    "itemRevision": 3,
+    "incrementalChanges": 2
+  },
+  "mcpStaleRevisionRejected": true,
+  "rejectedWriteAddedNoHistory": true,
+  "restAPISave": {
+    "itemRevision": 4,
+    "incrementalChanges": 1,
+    "browserDisplayedNoteAndMCPLine": true
+  },
+  "mcpRevisionCheckedCleanup": true,
+  "mcpCompactChangesOmitDocuments": true,
+  "originalExampleProjectLabelsAndItemsExactlyPreserved": true,
+  "finalMirrorCursor": "17",
+  "syncSteps": {
+    "initial": {
+      "origin": "https://fieldwork-annotations.ben-ebsworth.workers.dev",
+      "projectId": "example-fieldwork",
+      "fromCursor": "0",
+      "cursor": "10",
+      "changes": 5,
+      "upserts": 5,
+      "deletes": 0,
+      "items": 3,
+      "labels": 1,
+      "updated": true,
+      "file": "/private/tmp/fieldwork-live-sync-check/mirror/mirror.json"
+    },
+    "browser-save": {
+      "origin": "https://fieldwork-annotations.ben-ebsworth.workers.dev",
+      "projectId": "example-fieldwork",
+      "fromCursor": "10",
+      "cursor": "11",
+      "changes": 1,
+      "upserts": 1,
+      "deletes": 0,
+      "items": 3,
+      "labels": 1,
+      "updated": true,
+      "file": "/private/tmp/fieldwork-live-sync-check/mirror/mirror.json"
+    },
+    "mcp-write": {
+      "origin": "https://fieldwork-annotations.ben-ebsworth.workers.dev",
+      "projectId": "example-fieldwork",
+      "fromCursor": "11",
+      "cursor": "13",
+      "changes": 2,
+      "upserts": 2,
+      "deletes": 0,
+      "items": 3,
+      "labels": 2,
+      "updated": true,
+      "file": "/private/tmp/fieldwork-live-sync-check/mirror/mirror.json"
+    },
+    "api-write": {
+      "origin": "https://fieldwork-annotations.ben-ebsworth.workers.dev",
+      "projectId": "example-fieldwork",
+      "fromCursor": "13",
+      "cursor": "14",
+      "changes": 1,
+      "upserts": 1,
+      "deletes": 0,
+      "items": 3,
+      "labels": 2,
+      "updated": true,
+      "file": "/private/tmp/fieldwork-live-sync-check/mirror/mirror.json"
+    },
+    "cleanup": {
+      "origin": "https://fieldwork-annotations.ben-ebsworth.workers.dev",
+      "projectId": "example-fieldwork",
+      "fromCursor": "14",
+      "cursor": "17",
+      "changes": 3,
+      "upserts": 1,
+      "deletes": 2,
+      "items": 2,
+      "labels": 1,
+      "updated": true,
+      "file": "/private/tmp/fieldwork-live-sync-check/mirror/mirror.json"
+    },
+    "noop": {
+      "origin": "https://fieldwork-annotations.ben-ebsworth.workers.dev",
+      "projectId": "example-fieldwork",
+      "fromCursor": "17",
+      "cursor": "17",
+      "changes": 0,
+      "upserts": 0,
+      "deletes": 0,
+      "items": 2,
+      "labels": 1,
+      "updated": false,
+      "file": "/private/tmp/fieldwork-live-sync-check/mirror/mirror.json"
+    }
+  },
+  "tokenNeverWrittenToMirror": true
+}

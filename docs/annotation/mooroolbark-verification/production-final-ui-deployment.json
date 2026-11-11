@@ -1,0 +1,15 @@
+{
+  "checkedAt": "2026-09-27T04:42:16Z",
+  "url": "https://fieldwork-annotations.ben-ebsworth.workers.dev",
+  "workerVersion": "651215d2-c772-4f14-87cb-032cbe201a8d",
+  "frontendEntry": "/assets/index-C_l181Xb.js",
+  "containerImage": "sha256:d7810e08272225d966535c217e671fcece31553d5ec1c2ee758f9960e952d93a",
+  "containerRollout": "none",
+  "changes": [
+    "20-item queue pages",
+    "no duplicate initial queue fetch",
+    "Retry load preserves selected project",
+    "project selection resets queue cursor/loading"
+  ],
+  "publicIndexMatched": true
+}

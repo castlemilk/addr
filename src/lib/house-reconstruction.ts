@@ -1,5 +1,4 @@
 import * as THREE from "three";
-import type { Address } from "./geo-engine";
 
 export interface HouseOptions {
   width?: number; // meters along X
@@ -201,11 +200,6 @@ export function createLod2HouseGroup(opts: HouseOptions): THREE.Group {
       color: 0x112238, // Monocrystalline Navy Blue
       metalness: 0.88,
       roughness: 0.18,
-    });
-    const frameMat = new THREE.MeshStandardMaterial({
-      color: 0xc0c5ce, // Aluminum frame
-      metalness: 0.9,
-      roughness: 0.3,
     });
 
     const panelCount = isTarget ? 6 : 4;

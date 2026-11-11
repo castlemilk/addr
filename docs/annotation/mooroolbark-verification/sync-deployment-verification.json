@@ -1,0 +1,14 @@
+{
+  "url": "https://fieldwork-annotations.ben-ebsworth.workers.dev",
+  "versionId": "ad5c4ef9-4caa-46c9-9d55-fd47b8ab760d",
+  "container": {
+    "id": "a03e7a53-0294-4cb8-9cf8-5164b7b9a053",
+    "name": "fieldwork-annotations-annotationbackend",
+    "state": "active",
+    "instances": 1,
+    "image": "registry.cloudflare.com/2132ccf47ceb5fff234c34d85490470a/fieldwork-annotations-annotationbackend@sha256:9531514723dff042f8db41ab3f0f7a060981131245f70f25db07484388ce7482",
+    "version": 3,
+    "updated_at": "2026-09-27T03:28:23.976Z"
+  },
+  "scope": "MCP and CLI synchronization release during immutable asset upload; data migration still in progress."
+}

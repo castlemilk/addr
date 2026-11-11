@@ -19,6 +19,13 @@ export interface Deep3DFootprint {
   areaM2: number;
 }
 
+export interface Deep3DRooflinePart {
+  /** Part ring in metres relative to the building centroid (x east, y north). */
+  ring: [number, number][];
+  /** Per-ring-vertex roof height in metres. */
+  z: number[];
+}
+
 export interface Deep3DBuildingData {
   height: number;
   eaveHeight: number;
@@ -33,6 +40,12 @@ export interface Deep3DBuildingData {
   ringMeters: [number, number][];
   widthMeters: number;
   depthMeters: number;
+  /** Roof surface material from a CRM correction (e.g. "terracotta"). */
+  roofMaterial?: string | null;
+  /** Per-plane roofline partition (TU Delft port); preferred over roofType. */
+  rooflineParts?: Deep3DRooflinePart[] | null;
+  /** Property / parcel boundary ring in metres relative to centroid. */
+  parcelRingMeters?: [number, number][] | null;
 }
 
 export interface Deep3DModelInput {
@@ -44,11 +57,22 @@ export interface Deep3DModelInput {
   eaveHeight?: number; // meters (e.g. 7.5m)
   ridgeHeight?: number; // meters (e.g. 15.5m)
   roofType?: "hipped" | "gabled" | "executive" | "flat";
+  /** Relative depth relief from the ML generator; models terrain gradient. */
+  terrain?: Deep3DTerrain | null;
+  /** Vertical metres spanned by the full terrain relief range. */
+  terrainReliefMeters?: number;
   /** Real roof outline (from AI tile pipeline); drives the heightfield shape. */
   footprint?: Deep3DFootprint;
   /** Ground size of the image in metres (tile width), for UV -> metre scaling. */
   metersPerWidth?: number;
   metersPerHeight?: number;
+}
+
+export interface Deep3DTerrain {
+  size: number;
+  /** Row-major relative relief 0..1 covering the same tile as the imagery. */
+  values: number[];
+  metersPerWidth: number;
 }
 
 export interface Deep3DModelOutput {
@@ -66,6 +90,10 @@ export interface Deep3DModelOutput {
     estimatedVolumeM3: number;
     roofAreaM2: number;
     processedVertices: number;
+    /** Lowest local ground elevation (m) under the footprint vertices. */
+    groundHeightMeters: number;
+    /** Ground relief across the footprint (max - min, metres). */
+    groundReliefMeters: number;
   };
 }
 
@@ -154,6 +182,66 @@ export async function generateDeep3DHeightmap(
   const bHalfW = (bMaxU - bMinU) / 2;
   const bHalfD = (bMaxV - bMinV) / 2;
 
+  // Terrain relief from the ML depth model: bilinear sample in tile UV, scaled
+  // to metres by terrainReliefMeters. Ground, canopy, and the carved footprint
+  // all sit on this surface so the studio models the property's gradient.
+  const terrain = input.terrain ?? null;
+  const terrainRelief = Math.max(1, input.terrainReliefMeters ?? 8);
+  // Terrain is the low-frequency component of the depth field: blur out roofs
+  // and canopies so the ground models the property's slope, not obstacles.
+  const terrainGrid = (() => {
+    if (!terrain || terrain.values.length === 0) return null;
+    const size = terrain.size;
+    const radius = 5;
+    const out = new Float32Array(size * size);
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        let sum = 0;
+        let count = 0;
+        for (let dy = -radius; dy <= radius; dy++) {
+          const yy = Math.min(size - 1, Math.max(0, y + dy));
+          for (let dx = -radius; dx <= radius; dx++) {
+            const xx = Math.min(size - 1, Math.max(0, x + dx));
+            sum += terrain.values[yy * size + xx] ?? 0;
+            count++;
+          }
+        }
+        out[y * size + x] = sum / count;
+      }
+    }
+    return { size, values: out };
+  })();
+  const sampleTerrain = (u: number, v: number): number => {
+    if (!terrainGrid || terrainGrid.values.length === 0) return 0;
+    const size = terrainGrid.size;
+    const fx = Math.min(1, Math.max(0, u)) * (size - 1);
+    const fy = Math.min(1, Math.max(0, v)) * (size - 1);
+    const x0 = Math.floor(fx);
+    const y0 = Math.floor(fy);
+    const x1 = Math.min(size - 1, x0 + 1);
+    const y1 = Math.min(size - 1, y0 + 1);
+    const tx = fx - x0;
+    const ty = fy - y0;
+    const v00 = terrainGrid.values[y0 * size + x0] ?? 0;
+    const v10 = terrainGrid.values[y0 * size + x1] ?? 0;
+    const v01 = terrainGrid.values[y1 * size + x0] ?? 0;
+    const v11 = terrainGrid.values[y1 * size + x1] ?? 0;
+    const top = v00 * (1 - tx) + v10 * tx;
+    const bottom = v01 * (1 - tx) + v11 * tx;
+    return (top * (1 - ty) + bottom * ty) * terrainRelief;
+  };
+  const ringPoints = footprintRing
+    ? footprintRing.map(([px, py]) => [
+        0.5 + (ringCenterX + px) / metersPerWidth,
+        0.5 - (ringCenterY + py) / metersPerHeight,
+      ])
+    : [[0.5, 0.5]];
+  const ringTerrain = ringPoints.map(([u, v]) => sampleTerrain(u, v));
+  const groundHeightMeters = terrain ? Math.min(...ringTerrain) : 0;
+  const groundReliefMeters = terrain
+    ? Math.max(...ringTerrain) - Math.min(...ringTerrain)
+    : 0;
+
   let maxH = 0;
   let peakCanopyH = 0;
   let peakRoofH = 0;
@@ -185,21 +273,23 @@ export async function generateDeep3DHeightmap(
         const mx = (u - 0.5) * metersPerWidth - ringCenterX;
         const my = (0.5 - v) * metersPerHeight - ringCenterY;
 
+        const terrainH = terrain ? sampleTerrain(u, v) : 0;
         if (pointInRing(mx, my, footprintRing)) {
           // The extracted roof mesh is the reconstruction for this footprint;
-          // keep the displaced terrain flat underneath so the mesh never
-          // z-fights the heightfield's own roof profile.
-          h = 0.12;
+          // the carved pad follows the local terrain slope, and the mesh seats
+          // at the lowest ground point so its skirt covers the downhill gap.
+          h = terrainH + 0.12;
           if (ridgeH > peakRoofH) peakRoofH = ridgeH;
         } else if (isVegetation) {
           // Only dense, dark canopies rise; lawns stay near ground to keep the
           // extracted roof silhouette legible.
           const dense = exg > 0.2 && g < 165;
-          h = dense ? 2.2 + Math.min(4.5, (exg - 0.2) * 30) : 0.35 + exg * 1.2;
-          if (h > peakCanopyH) peakCanopyH = h;
+          const canopy = dense ? 2.2 + Math.min(4.5, (exg - 0.2) * 30) : 0.35 + exg * 1.2;
+          h = terrainH + canopy;
+          if (canopy > peakCanopyH) peakCanopyH = canopy;
         } else {
           const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0;
-          h = 0.1 + lum * 0.3;
+          h = terrainH + 0.1 + lum * 0.3;
         }
       } else {
         // --- SYNTHETIC PARCEL FALLBACK ---
@@ -323,6 +413,8 @@ export async function generateDeep3DHeightmap(
       estimatedVolumeM3: estimatedVolume,
       roofAreaM2: Math.round(parcelAreaM2),
       processedVertices: numVertices,
+      groundHeightMeters: Math.round(groundHeightMeters * 100) / 100,
+      groundReliefMeters: Math.round(groundReliefMeters * 100) / 100,
     },
   };
 }
@@ -509,34 +601,108 @@ export function createProceduralAerialCanvas(
 }
 
 /**
+ * Loads a cluster of satellite tiles centered on (lat, lon) and composites them onto a canvas.
+ * This guarantees the target address sits at the exact center (0.5, 0.5) of the canvas,
+ * providing generous terrain margin in every direction with no edge clipping.
+ */
+export async function loadCenteredSatelliteCanvas(
+  lat: number,
+  lon: number,
+  vintage = "google-latest",
+  zoom = 18,
+  canvasSize = 512
+): Promise<HTMLCanvasElement> {
+  if (typeof document === "undefined") {
+    return createProceduralAerialCanvas(canvasSize, canvasSize);
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = canvasSize;
+  canvas.height = canvasSize;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return canvas;
+
+  // Rich suburban earth/grass base tone so any missing margins blend seamlessly
+  ctx.fillStyle = "#3d4f33";
+  ctx.fillRect(0, 0, canvasSize, canvasSize);
+
+  const n = Math.pow(2, zoom);
+  const xPixel = ((lon + 180) / 360) * n * 256;
+  const latRad = (lat * Math.PI) / 180;
+  const yPixel =
+    ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) *
+    n *
+    256;
+
+  const half = canvasSize / 2;
+  const xMin = xPixel - half;
+  const xMax = xPixel + half;
+  const yMin = yPixel - half;
+  const yMax = yPixel + half;
+
+  const txMin = Math.floor(xMin / 256);
+  const txMax = Math.floor(xMax / 256);
+  const tyMin = Math.floor(yMin / 256);
+  const tyMax = Math.floor(yMax / 256);
+
+  const tilePromises: Promise<void>[] = [];
+
+  for (let tx = txMin; tx <= txMax; tx++) {
+    for (let ty = tyMin; ty <= tyMax; ty++) {
+      let tileUrl = "";
+      if (vintage === "esri-recent") {
+        tileUrl = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom}/${ty}/${tx}`;
+      } else if (vintage === "esri-wayback") {
+        tileUrl = `https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/23001/${zoom}/${ty}/${tx}`;
+      } else {
+        tileUrl = `https://mt1.google.com/vt/lyrs=s&x=${tx}&y=${ty}&z=${zoom}`;
+      }
+
+      const p = new Promise<void>((resolve) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        let resolved = false;
+        const finish = () => {
+          if (!resolved) {
+            resolved = true;
+            resolve();
+          }
+        };
+        img.onload = () => {
+          const dx = Math.round(tx * 256 - xMin);
+          const dy = Math.round(ty * 256 - yMin);
+          ctx.drawImage(img, dx, dy, 256, 256);
+          finish();
+        };
+        img.onerror = finish;
+        setTimeout(finish, 3500);
+        img.src = tileUrl;
+      });
+      tilePromises.push(p);
+    }
+  }
+
+  await Promise.all(tilePromises);
+  return canvas;
+}
+
+/**
  * Loads a real satellite tile or falls back gracefully to a high-resolution procedural orthophoto.
  */
 export async function loadSatelliteImageOrFallback(
   lat: number,
   lon: number,
-  vintage = "google-latest"
+  vintage = "google-latest",
+  zoom = 18,
+  canvasSize = 512
 ): Promise<HTMLCanvasElement | HTMLImageElement> {
-  if (typeof window === "undefined") {
-    return createProceduralAerialCanvas(256, 256);
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return createProceduralAerialCanvas(canvasSize, canvasSize);
   }
 
-  const url = getSatelliteTileUrl(lat, lon, vintage, 18);
-
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      resolve(img);
-    };
-    img.onerror = () => {
-      resolve(createProceduralAerialCanvas(512, 512));
-    };
-    // 3.5-second timeout safeguard
-    setTimeout(() => {
-      if (!img.complete) {
-        resolve(createProceduralAerialCanvas(512, 512));
-      }
-    }, 3500);
-    img.src = url;
-  });
+  try {
+    return await loadCenteredSatelliteCanvas(lat, lon, vintage, zoom, canvasSize);
+  } catch {
+    return createProceduralAerialCanvas(canvasSize, canvasSize);
+  }
 }

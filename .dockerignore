@@ -1,0 +1,22 @@
+# Wrangler supplies Dockerfiles on stdin, so it reads this root ignore file.
+# Keep all Go source and embedded SQL available to both server Dockerfiles.
+.git
+**/node_modules
+.next
+**/dist
+**/.wrangler
+**/.env
+**/.env.*
+**/.dev.vars
+**/.dev.vars.*
+**/.secrets*.json
+**/admin-token.txt
+data
+artifacts
+output
+tmp
+**/*.db
+**/*.db-*
+**/*.sqlite
+**/*.sqlite-*
+**/*.mbtiles

@@ -1,0 +1,86 @@
+import assert from 'node:assert/strict';
+import {readFile,writeFile,mkdir,cp,rm} from 'node:fs/promises';
+import puppeteer from 'puppeteer-core';
+const base=process.env.APP_URL||'http://localhost:3008',id=`qa_vehicle_${Date.now()}`,directory=`data/scenes/${id}`;
+const original=JSON.parse(await readFile('data/scenes/roof_training_250-25218/latest.json','utf8'));
+const model={...original,id,groups:[],objects:[...original.objects.filter(o=>o.kind==='car').slice(0,1),...original.objects.filter(o=>o.kind==='tree')].map(o=>({...o,parent_id:undefined,group_id:undefined}))};
+await mkdir(directory);await writeFile(`${directory}/latest.json`,JSON.stringify(model));
+await cp(`data/scenes/roof_training_250-25218/${model.image_sha256}.png`,`${directory}/${model.image_sha256}.png`);
+const browser=await puppeteer.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true,args:['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+const page=await browser.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+await page.setViewport({width:1500,height:1080});
+const button=async text=>(await page.waitForSelector(`button::-p-text(${text})`)).click();
+const load=async()=>(await fetch(`${base}/api/scenes?id=${id}`)).json();
+const reviewedCar=data=>data.review.objects.find(o=>o.id===model.objects[0].id);
+const input=async(label,value)=>{
+ const field=await page.$(`input[aria-label="${label}"]`);await field.focus();await field.evaluate(e=>e.select());await field.press('Backspace');await field.type(String(value));await field.press('Tab');
+ assert.equal(await field.evaluate(e=>e.value),String(value));
+};
+const saved=async revision=>{
+ await page.waitForFunction(r=>document.body.textContent.includes(`Saved revision ${r}`)||document.querySelector('.scene-status-space [role="alert"]')?.textContent,{},revision);
+ assert(!await page.$eval('body',e=>e.querySelector('.scene-status-space [role="alert"]')?.textContent));
+};
+try {
+ await page.goto(`${base}/scenes?scene=${id}&kind=car&status=all`,{waitUntil:'networkidle2'});
+ await page.waitForSelector('.scene-car-controls');
+ const initialArrow=await page.$eval('g[aria-label^="Estimated vehicle front"]',e=>e.getAttribute('aria-label'));
+ const initialBearing=await page.$eval('input[aria-label="Vehicle front bearing"]',e=>e.value);
+ await page.focus('select[aria-label="Vehicle body style"]');await page.keyboard.press('Tab');
+ assert.equal(await page.evaluate(()=>document.activeElement?.getAttribute('aria-label')),'Vehicle front bearing','Keyboard navigation reaches the direction field');
+ await page.select('select[aria-label="Vehicle body style"]','van');
+ await input('Vehicle front bearing',212.5);
+ await input('Cabin length (%)',73.25);await input('Cabin width (%)',81.5);await input('Cabin position (%)',-12.5);
+ assert.equal(await page.$eval('g[aria-label^="Estimated vehicle front"]',e=>e.getAttribute('aria-label')),'Estimated vehicle front 213 degrees');
+ await button('Flip front');
+ await page.waitForFunction(()=>document.querySelector('input[aria-label="Vehicle front bearing"]')?.value==='32.5');
+ assert.equal(await page.$eval('input[aria-label="Vehicle front bearing"]',e=>e.value),'32.5');
+ await button('Undo edit');
+ await page.waitForFunction(()=>document.querySelector('input[aria-label="Vehicle front bearing"]')?.value==='212.5');
+ assert.equal(await page.$eval('input[aria-label="Vehicle front bearing"]',e=>e.value),'212.5');
+ await page.click('button::-p-text(Prediction)');
+ await page.waitForFunction(v=>document.querySelector('input[aria-label="Vehicle front bearing"]')?.value===v,{},initialBearing);
+ assert.equal(await page.$eval('g[aria-label^="Estimated vehicle front"]',e=>e.getAttribute('aria-label')),initialArrow);
+ assert(await page.$eval('input[aria-label="Vehicle front bearing"]',e=>e.matches(':disabled')));
+ assert.equal(await page.$eval('input[aria-label="Vehicle front bearing"]',e=>e.value),initialBearing,'The prediction inspector must show original values');
+ assert.equal(await page.$eval('select[aria-label="Vehicle body style"]',e=>e.value),'car');
+ await page.click('button::-p-text(Your edits)');
+ await page.setRequestInterception(true);let fail=true;
+ page.on('request',request=>{
+  if(fail&&request.method()==='POST'&&request.url()===`${base}/api/scenes`){fail=false;void request.respond({status:503,contentType:'application/json',body:JSON.stringify({error:'Test interruption. Vehicle edits are retained.'})});}
+  else void request.continue();
+ });
+ await button('Save scene');await page.waitForFunction(()=>document.querySelector('.scene-status-space [role="alert"]')?.textContent.includes('Vehicle edits'));
+ assert.equal(await page.$eval('input[aria-label="Cabin length (%)"]',e=>e.value),'73.25');
+ await button('Save scene');await saved(1);
+ await page.reload({waitUntil:'networkidle2'});await page.waitForSelector('.scene-car-controls');
+ let data=await load();const vehicle=reviewedCar(data).model.car;
+ assert.deepEqual(vehicle,{profile:'van',cabin_length_ratio:.7325,cabin_width_ratio:.815,cabin_offset_ratio:-.125,heading_deg:212.5});
+ assert.equal(reviewedCar(data).model.height_verified,false);
+ assert.equal(reviewedCar(data).status,'candidate');
+ assert.deepEqual(data.model,JSON.parse(JSON.stringify(model)));
+ assert.equal(await page.$eval('select[aria-label="Vehicle body style"]',e=>e.value),'van');
+ await button('3D scene');await page.waitForSelector('.scene-3d-canvas canvas');await button('Isolate object');
+ await page.waitForSelector('button::-p-text(Show surroundings)');
+ await page.screenshot({path:'/tmp/addr-car-3d.png'});
+ await button('Whole scene');await page.waitForSelector('button::-p-text(Isolate object)');
+ await button('Aerial');await button('Follow outline');
+ assert.equal(await page.$eval('g[aria-label^="Estimated vehicle front"]',e=>e.getAttribute('aria-label')),initialArrow);
+ await button('Save scene');await saved(2);
+ data=await load();assert.equal(reviewedCar(data).model.car.heading_deg,undefined);
+ assert.equal(await page.$eval('.scene-inspector select',e=>e.value),'car');
+ await page.select('.scene-inspector select','tree');
+ await button('Save scene');await saved(3);
+ data=await load();assert.equal(reviewedCar(data).model.car,undefined,'Changing class removes incompatible vehicle feedback');
+ await button('Undo last save');await saved(4);
+ assert.equal(reviewedCar(await load()).model.car.profile,'van');
+ await mkdir(`${directory}/models`);await writeFile(`${directory}/models/${model.model_signature}.json`,JSON.stringify(model));
+ const newer={...model,model_signature:'a'.repeat(64)};await writeFile(`${directory}/models/${newer.model_signature}.json`,JSON.stringify(newer));await writeFile(`${directory}/latest.json`,JSON.stringify(newer));
+ await page.reload({waitUntil:'networkidle2'});await button('Preview earlier edits');await button('Carry edits forward');await saved(5);
+ data=await load();assert.equal(reviewedCar(data).model.car.cabin_length_ratio,.7325);assert.equal(reviewedCar(data).status,'needs_adjustment');
+ await page.setViewport({width:390,height:844});
+ await page.$eval('.scene-car-controls',e=>e.scrollIntoView());await page.screenshot({path:'/tmp/addr-car-mobile.png'});
+ assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+ assert.deepEqual(errors,[]);
+ console.log('Scene vehicles: body styles, decimal heading/proportions, front arrow/flip, immutable prediction, undo, failed-save recovery, save/reload, class change, model recovery, 3D focus and mobile passed.');
+}catch(error){console.error(await page.$eval('body',e=>e.innerText.slice(-5000)));await page.screenshot({path:'/tmp/addr-car-failure.png',fullPage:true});throw error;}
+finally{await browser.close();await rm(directory,{recursive:true,force:true});}

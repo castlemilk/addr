@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import * as maplibregl from "maplibre-gl";
+import type { FeatureCollection } from "geojson";
 import { Place, Address } from "@/lib/geo-engine";
 import { createGoogleMapsStyle, MapLayerMode, SatelliteVintage } from "@/lib/google-maps-style";
 import { registerAiSatelliteProtocol } from "@/lib/ml-satellite-enhancer";
@@ -19,10 +20,19 @@ import {
   Clock,
   RotateCw,
   RotateCcw,
+  Utensils,
+  Coffee,
+  ShoppingBag,
+  MapPin,
 } from "lucide-react";
+import SceneMapOverlay from "@/components/scenes/SceneMapOverlay";
 import Deep3DStudio from "@/components/Deep3DStudio";
 import { Deep3DBuildingData } from "@/lib/deep-3d-model";
 import { findAddressRoof, loadAddressRoofs } from "@/lib/address-roofs";
+import type { AddressRoofRecord } from "@/lib/address-roofs";
+import { crmClient, ROOF_BOX_LABEL } from "@/lib/crm-client";
+import type { CrmDrawKind } from "@/lib/crm-client";
+import { FeatureKind } from "@/gen/crm/v1/crm_pb";
 
 interface MapComponentProps {
   selectedLocation: { lat: number; lon: number } | null;
@@ -36,6 +46,17 @@ interface MapComponentProps {
   onQuickFilter?: (category: string) => void;
   isDeep3DStudioOpen?: boolean;
   setIsDeep3DStudioOpen?: (open: boolean) => void;
+  crmDraw?: { kind: CrmDrawKind | "scene" } | null;
+  onRequestScene?: () => void;
+  crmEdit?: { id: bigint; geojson: string } | null;
+  onCrmEditSave?: (ring: [number, number][]) => void;
+  onCrmEditCancel?: () => void;
+  onCrmDrawComplete?: (ring: [number, number][]) => void;
+  onCrmDrawCancel?: () => void;
+  /** CRM target address whose saved roof-box proposals render persistently. */
+  proposalAddressId?: bigint | null;
+  /** Bump to refetch proposals after saves/deletes. */
+  proposalRefresh?: number;
 }
 
 function ringContains(lon: number, lat: number, ring: [number, number][]): boolean {
@@ -56,6 +77,37 @@ function ringContains(lon: number, lat: number, ring: [number, number][]): boole
 function lngLatToMetres(lon: number, lat: number, refLon: number, refLat: number) {
   const cosLat = Math.cos((refLat * Math.PI) / 180);
   return [(lon - refLon) * 111320 * cosLat, (lat - refLat) * 111320] as [number, number];
+}
+
+/** Axis-aligned rectangle corners (SW, SE, NE, NW) from two drag corners. */
+export function rectCorners(
+  a: [number, number],
+  b: [number, number]
+): [number, number][] {
+  const minLon = Math.min(a[0], b[0]);
+  const maxLon = Math.max(a[0], b[0]);
+  const minLat = Math.min(a[1], b[1]);
+  const maxLat = Math.max(a[1], b[1]);
+  return [
+    [minLon, minLat],
+    [maxLon, minLat],
+    [maxLon, maxLat],
+    [minLon, maxLat],
+  ];
+}
+
+/** Approximate ground area (m2) of a lng/lat rectangle. */
+export function rectAreaM2(corners: [number, number][]): number {
+  if (corners.length < 4) return 0;
+  const lons = corners.map(([x]) => x);
+  const lats = corners.map(([, y]) => y);
+  const refLon = (Math.min(...lons) + Math.max(...lons)) / 2;
+  const refLat = (Math.min(...lats) + Math.max(...lats)) / 2;
+  const [x0] = lngLatToMetres(Math.min(...lons), refLat, refLon, refLat);
+  const [x1] = lngLatToMetres(Math.max(...lons), refLat, refLon, refLat);
+  const [, y0] = lngLatToMetres(refLon, Math.min(...lats), refLon, refLat);
+  const [, y1] = lngLatToMetres(refLon, Math.max(...lats), refLon, refLat);
+  return Math.max(0, (x1 - x0) * (y1 - y0));
 }
 
 function buildingFromFeature(
@@ -166,6 +218,15 @@ export default function MapComponent({
   onQuickFilter,
   isDeep3DStudioOpen: externalDeep3DOpen,
   setIsDeep3DStudioOpen: externalSetDeep3DOpen,
+  crmDraw,
+  onRequestScene,
+  crmEdit,
+  onCrmEditSave,
+  onCrmEditCancel,
+  onCrmDrawComplete,
+  onCrmDrawCancel,
+  proposalAddressId,
+  proposalRefresh,
 }: MapComponentProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<maplibregl.Map | null>(null);
@@ -173,6 +234,35 @@ export default function MapComponent({
   const poiMarkersRef = useRef<maplibregl.Marker[]>([]);
   const addressMarkersRef = useRef<maplibregl.Marker[]>([]);
   const roofLayerRef = useRef<RealRoofLayer | null>(null);
+  const [sceneMap, setSceneMap] = useState<maplibregl.Map | null>(null);
+  const addressRecordsRef = useRef<AddressRoofRecord[]>([]);
+  const crmDrawRef = useRef<{ kind: CrmDrawKind | "scene" } | null>(null);
+  const crmEditMarkersRef = useRef<maplibregl.Marker[]>([]);
+  const crmEditRingRef = useRef<[number, number][]>([]);
+  const crmEditRef = useRef(false);
+  const onCrmEditSaveRef = useRef(onCrmEditSave);
+  const onCrmEditCancelRef = useRef(onCrmEditCancel);
+  const [crmEditVertices, setCrmEditVertices] = useState(0);
+  const draftRingRef = useRef<[number, number][]>([]);
+  const onCrmDrawCompleteRef = useRef<((ring: [number, number][]) => void) | undefined>(undefined);
+  const onCrmDrawCancelRef = useRef<(() => void) | undefined>(undefined);
+  const clearDraftRef = useRef<(() => void) | null>(null);
+  const finishDraftRef = useRef<(() => void) | null>(null);
+  const cancelBoxRef = useRef<(() => void) | null>(null);
+  const lastClickRef = useRef<{ time: number; x: number; y: number } | null>(null);
+  const [draftPoints, setDraftPoints] = useState(0);
+  // Roof-box proposal drag state (draw kind "box"): anchor corner + live area.
+  const boxAnchorRef = useRef<[number, number] | null>(null);
+  const [boxAreaM2, setBoxAreaM2] = useState(0);
+  // Saved roof-box proposals (CRM OBJECT features) for the target address.
+  const proposalsRef = useRef<
+    {
+      type: "Feature";
+      properties: { label: string };
+      geometry: { type: "Polygon"; coordinates: number[][][] };
+    }[]
+  >([]);
+  const renderProposalsRef = useRef<(() => void) | null>(null);
 
   // Layer mode state: streets | satellite | topography | dark
   const [layerMode, setLayerMode] = useState<MapLayerMode>("streets");
@@ -180,6 +270,7 @@ export default function MapComponent({
   const [show3DBuildings, setShow3DBuildings] = useState(true);
   const [enableAiSatellite, setEnableAiSatellite] = useState(true);
   const [enableLoD2Houses, setEnableLoD2Houses] = useState(true);
+  const [enableRooflines, setEnableRooflines] = useState(false);
   const [enableTrees, setEnableTrees] = useState(true);
   const [isLayersMenuOpen, setIsLayersMenuOpen] = useState(false);
   const [deep3DBuilding, setDeep3DBuilding] = useState<Deep3DBuildingData | null>(null);
@@ -199,6 +290,15 @@ export default function MapComponent({
     maplibregl.setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
     registerAiSatelliteProtocol(maplibregl);
   }, []);
+
+  // Keep drawing refs in sync with props
+  useEffect(() => {
+    crmDrawRef.current = crmDraw ?? null;
+    onCrmEditSaveRef.current = onCrmEditSave;
+    onCrmEditCancelRef.current = onCrmEditCancel;
+    onCrmDrawCompleteRef.current = onCrmDrawComplete;
+    onCrmDrawCancelRef.current = onCrmDrawCancel;
+  }, [crmDraw, onCrmDrawComplete, onCrmDrawCancel]);
 
   // Sync external dark mode with layerMode
   useEffect(() => {
@@ -220,7 +320,9 @@ export default function MapComponent({
 
     if (!roofLayerRef.current) {
       roofLayerRef.current = new RealRoofLayer();
+      roofLayerRef.current.setRooflines(enableRooflines);
     }
+    roofLayerRef.current.setAddressRecords(addressRecordsRef.current);
 
     if (!map.getLayer(roofLayerRef.current.id)) {
       try {
@@ -252,7 +354,15 @@ export default function MapComponent({
     const initialLat = selectedLocation?.lat ?? -37.79044; // Default: 27 Cambridge Rd, Mooroolbark VIC
     const initialLon = selectedLocation?.lon ?? 145.31252;
 
-    const style = createGoogleMapsStyle(tileServiceUrl, layerMode, show3DBuildings, enableAiSatellite, satelliteVintage, enableTrees);
+    const style = createGoogleMapsStyle(
+      tileServiceUrl,
+      layerMode,
+      show3DBuildings,
+      enableAiSatellite,
+      satelliteVintage,
+      enableTrees,
+      enableLoD2Houses
+    );
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
@@ -276,6 +386,8 @@ export default function MapComponent({
 
     // Map click handler: show AI uplift metadata for buildings/trees, else reverse geocode
     map.on("click", (e) => {
+      if (crmDrawRef.current || crmEditRef.current) return;
+      if (map.getLayer("scene-review-fill") && map.queryRenderedFeatures(e.point, { layers: ["scene-review-fill"] }).length) return;
       const upliftLayers = [
         "building-3d-vector",
         "building-2d",
@@ -286,6 +398,7 @@ export default function MapComponent({
         ? map.queryRenderedFeatures(e.point, { layers: upliftLayers })
         : [];
       if (features.length > 0) {
+        onLocationSelect(e.lngLat.lat, e.lngLat.lng);
         const props = features[0].properties ?? {};
         const isTree = String(props.kind ?? "") === "tree";
         const height = Number(props.render_height ?? props.height ?? 0);
@@ -328,26 +441,467 @@ export default function MapComponent({
       onLocationSelect(e.lngLat.lat, e.lngLat.lng);
     });
 
+    // CRM boundary drawing mode: click adds vertices, double-click finishes
+    const ensureDraftLayers = () => {
+      if (map.getSource("crm-draft")) return;
+      map.addSource("crm-draft", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+      map.addLayer({
+        id: "crm-draft-fill",
+        type: "fill",
+        source: "crm-draft",
+        paint: { "fill-color": "#38bdf8", "fill-opacity": 0.25 },
+      });
+      map.addLayer({
+        id: "crm-draft-line",
+        type: "line",
+        source: "crm-draft",
+        paint: { "line-color": "#0284c7", "line-width": 2.5 },
+      });
+    };
+    const renderDraft = () => {
+      ensureDraftLayers();
+      const ring = draftRingRef.current;
+      const features =
+        ring.length >= 3
+          ? [
+              {
+                type: "Feature" as const,
+                properties: {},
+                geometry: {
+                  type: "Polygon" as const,
+                  coordinates: [[...ring, ring[0]]],
+                },
+              },
+            ]
+          : ring.length >= 2
+          ? [
+              {
+                type: "Feature" as const,
+                properties: {},
+                geometry: { type: "LineString" as const, coordinates: ring },
+              },
+            ]
+          : [];
+      const source = map.getSource("crm-draft") as maplibregl.GeoJSONSource | undefined;
+      source?.setData({ type: "FeatureCollection", features } as FeatureCollection);
+      setDraftPoints(ring.length);
+    };
+    const clearDraft = () => {
+      draftRingRef.current = [];
+      lastClickRef.current = null;
+      setDraftPoints(0);
+      const source = map.getSource("crm-draft") as maplibregl.GeoJSONSource | undefined;
+      source?.setData({ type: "FeatureCollection", features: [] } as FeatureCollection);
+    };
+    clearDraftRef.current = clearDraft;
+    const finishDraft = (lngLat?: { lng: number; lat: number }) => {
+      let ring = [...draftRingRef.current];
+      if (lngLat) {
+        // The two clicks of the terminating double-click also fire click events;
+        // drop the vertices they added at the finish location.
+        const near = (point: [number, number]) =>
+          Math.abs(point[0] - lngLat.lng) < 1e-6 && Math.abs(point[1] - lngLat.lat) < 1e-6;
+        while (ring.length > 0 && near(ring[ring.length - 1])) {
+          ring = ring.slice(0, -1);
+        }
+      } else {
+        // Native dblclick: collapse duplicate trailing vertices
+        while (
+          ring.length >= 2 &&
+          Math.hypot(ring[ring.length - 1][0] - ring[ring.length - 2][0],
+            ring[ring.length - 1][1] - ring[ring.length - 2][1]) < 2e-6
+        ) {
+          ring = ring.slice(0, -1);
+        }
+      }
+      clearDraft();
+      if (ring.length >= 3 && onCrmDrawCompleteRef.current) {
+        onCrmDrawCompleteRef.current(ring);
+      } else if (onCrmDrawCancelRef.current) {
+        onCrmDrawCancelRef.current();
+      }
+    };
+    finishDraftRef.current = finishDraft;
+    map.on("click", (e) => {
+      if (!crmDrawRef.current || ["box","scene"].includes(crmDrawRef.current.kind)) return;
+      const now = Date.now();
+      const previous = lastClickRef.current;
+      lastClickRef.current = { time: now, x: e.point.x, y: e.point.y };
+      // Detect the terminating double-click ourselves: MapLibre's dblclick
+      // event is suppressed while double-click zoom is disabled.
+      if (
+        previous &&
+        now - previous.time < 400 &&
+        Math.hypot(e.point.x - previous.x, e.point.y - previous.y) < 12
+      ) {
+        finishDraft(e.lngLat);
+        return;
+      }
+      draftRingRef.current = [...draftRingRef.current, [e.lngLat.lng, e.lngLat.lat]];
+      renderDraft();
+    });
+    map.on("dblclick", (e) => {
+      if (!crmDrawRef.current || ["box","scene"].includes(crmDrawRef.current.kind)) return;
+      e.preventDefault();
+      finishDraft(e.lngLat);
+    });
+    // Roof-box proposal mode: press-drag-release draws an axis-aligned
+    // rectangle, completed as a 4-corner ring (SW, SE, NE, NW). Reuses the
+    // crm-draft source for the live preview and the standard draw-complete
+    // pipeline for saving.
+    const cancelBox = () => {
+      boxAnchorRef.current = null;
+      setBoxAreaM2(0);
+      map.dragPan.enable();
+    };
+    cancelBoxRef.current = cancelBox;
+    map.on("mousedown", (e) => {
+      if (["box","scene"].includes(crmDrawRef.current?.kind || "") && e.originalEvent.button === 0) {
+        e.preventDefault();
+        boxAnchorRef.current = [e.lngLat.lng, e.lngLat.lat];
+        map.dragPan.disable();
+        return;
+      }
+      if (crmDrawRef.current && e.originalEvent.button === 2) {
+        cancelBox();
+        clearDraft();
+        onCrmDrawCancelRef.current?.();
+      }
+    });
+    map.on("mousemove", (e) => {
+      const anchor = boxAnchorRef.current;
+      if (!anchor || !["box","scene"].includes(crmDrawRef.current?.kind || "")) return;
+      const corners = rectCorners(anchor, [e.lngLat.lng, e.lngLat.lat]);
+      draftRingRef.current = corners;
+      renderDraft();
+      setBoxAreaM2(rectAreaM2(corners));
+    });
+    map.on("mouseup", (e) => {
+      const anchor = boxAnchorRef.current;
+      if (!anchor || !["box","scene"].includes(crmDrawRef.current?.kind || "")) return;
+      cancelBox();
+      const corners = rectCorners(anchor, [e.lngLat.lng, e.lngLat.lat]);
+      clearDraft();
+      // Ignore accidental clicks (sub-building-size drags).
+      if (rectAreaM2(corners) >= 4 && onCrmDrawCompleteRef.current) {
+        onCrmDrawCompleteRef.current(corners);
+      } else {
+        onCrmDrawCancelRef.current?.();
+      }
+    });
+    const onDrawKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && crmDrawRef.current) {
+        cancelBox();
+        clearDraft();
+        onCrmDrawCancelRef.current?.();
+      }
+    };
+    window.addEventListener("keydown", onDrawKeyDown);
+    const onCanvasDblClick = (event: MouseEvent) => {
+      if (!crmDrawRef.current || ["box","scene"].includes(crmDrawRef.current.kind)) return;
+      event.preventDefault();
+      finishDraft();
+    };
+    map.getCanvas().addEventListener("dblclick", onCanvasDblClick);
+
+    // Saved roof-box proposals: dashed magenta outlines from proposalsRef
+    // (repainted on idle so style reloads don't drop them).
+    const renderProposals = () => {
+      if (!map.isStyleLoaded()) return;
+      if (!map.getSource("crm-proposals")) {
+        map.addSource("crm-proposals", {
+          type: "geojson",
+          data: { type: "FeatureCollection", features: [] },
+        });
+        map.addLayer({
+          id: "crm-proposals-fill",
+          type: "fill",
+          source: "crm-proposals",
+          paint: { "fill-color": "#f0abfc", "fill-opacity": 0.12 },
+        });
+        map.addLayer({
+          id: "crm-proposals-line",
+          type: "line",
+          source: "crm-proposals",
+          paint: {
+            "line-color": "#e879f9",
+            "line-width": 2.5,
+            "line-dasharray": [2, 1.5],
+          },
+        });
+      }
+      const source = map.getSource("crm-proposals") as maplibregl.GeoJSONSource | undefined;
+      source?.setData({
+        type: "FeatureCollection",
+        features: proposalsRef.current,
+      } as FeatureCollection);
+    };
+    renderProposalsRef.current = renderProposals;
+
     // Load initial 3D layers and rebuild roof meshes after panning settles
     map.on("load", () => {
       ensureRoofLayer();
     });
+    let roofsNeedRefresh = true;
+    map.on("moveend", () => { roofsNeedRefresh = true; });
+    map.on("sourcedata", event => { if (event.sourceId === "local-vector" && event.isSourceLoaded) roofsNeedRefresh = true; });
     map.on("idle", () => {
       const roofLayer = roofLayerRef.current;
       if (!roofLayer || !map.getLayer(roofLayer.id)) {
         ensureRoofLayer();
         return;
       }
-      roofLayer.rebuild();
+      if (roofsNeedRefresh) { roofsNeedRefresh = false; roofLayer.rebuild(); }
+      if (!map.getSource("crm-proposals")) renderProposals();
     });
 
     mapInstanceRef.current = map;
+    setSceneMap(map);
+    // Headless tooling hook (scripts/map-shot.mjs) for deterministic camera shots.
+    (window as unknown as { __addrMap?: typeof map }).__addrMap = map;
 
     return () => {
+      window.removeEventListener("keydown", onDrawKeyDown);
       map.remove();
       mapInstanceRef.current = null;
     };
   }, []);
+
+  // CRM draw mode affordances (cursor + blocked double-click zoom)
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    if (crmDraw) {
+      if(crmDraw.kind === "scene") {map.jumpTo({pitch:0,bearing:0});setLayerMode("satellite");setIs3DMode(false);}
+      map.getCanvas().style.cursor = "crosshair";
+      if (map.doubleClickZoom) map.doubleClickZoom.disable();
+    } else {
+      map.getCanvas().style.cursor = "";
+      if (map.doubleClickZoom) map.doubleClickZoom.enable();
+      clearDraftRef.current?.();
+      cancelBoxRef.current?.();
+    }
+  }, [crmDraw]);
+
+  // Fetch saved roof-box proposals for the CRM target address (rendered by
+  // renderProposals; failures clear silently, e.g. CRM unreachable).
+  useEffect(() => {
+    if (proposalAddressId == null) {
+      proposalsRef.current = [];
+      renderProposalsRef.current?.();
+      return;
+    }
+    let cancelled = false;
+    crmClient
+      .getAddressCrm({ addressId: proposalAddressId })
+      .then((response) => {
+        if (cancelled) return;
+        const features: typeof proposalsRef.current = [];
+        for (const feature of response.features) {
+          if (feature.kind !== FeatureKind.OBJECT) continue;
+          if (!(feature.label ?? "").startsWith(ROOF_BOX_LABEL)) continue;
+          try {
+            const geometry = JSON.parse(feature.geometryJson) as {
+              type?: string;
+              coordinates?: number[][][];
+            };
+            if (geometry?.type !== "Polygon" || !geometry.coordinates?.[0]) continue;
+            features.push({
+              type: "Feature",
+              properties: { label: feature.label ?? "" },
+              geometry: { type: "Polygon", coordinates: geometry.coordinates },
+            });
+          } catch {
+            continue;
+          }
+        }
+        proposalsRef.current = features;
+        renderProposalsRef.current?.();
+      })
+      .catch(() => {
+        if (!cancelled) {
+          proposalsRef.current = [];
+          renderProposalsRef.current?.();
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [proposalAddressId, proposalRefresh]);
+
+  // CRM boundary edit mode: draggable vertex handles, edge-click insert,
+  // right-click vertex removal; Enter saves, Escape cancels.
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    const clearOverlay = () => {
+      for (const marker of crmEditMarkersRef.current) marker.remove();
+      crmEditMarkersRef.current = [];
+      if (map.getLayer("crm-edit-line")) map.removeLayer("crm-edit-line");
+      if (map.getLayer("crm-edit-fill")) map.removeLayer("crm-edit-fill");
+      if (map.getSource("crm-edit")) map.removeSource("crm-edit");
+    };
+
+    crmEditRef.current = Boolean(crmEdit);
+    if (!crmEdit) {
+      clearOverlay();
+      return;
+    }
+
+    let ring: [number, number][] = [];
+    try {
+      const geometry = JSON.parse(crmEdit.geojson) as {
+        coordinates: number[][][];
+      };
+      const coordinates = geometry.coordinates?.[0] ?? [];
+      ring = coordinates
+        .slice(0, coordinates.length > 1 ? -1 : undefined)
+        .map(([lon, lat]) => [lon, lat] as [number, number]);
+    } catch {
+      return;
+    }
+    if (ring.length < 3) return;
+    crmEditRingRef.current = ring;
+    setCrmEditVertices(ring.length);
+
+    const toFeatureCollection = (points: [number, number][]): FeatureCollection =>
+      ({
+        type: "FeatureCollection",
+        features:
+          points.length >= 3
+            ? [
+                {
+                  type: "Feature",
+                  properties: {},
+                  geometry: {
+                    type: "Polygon",
+                    coordinates: [[...points, points[0]]],
+                  },
+                },
+              ]
+            : [],
+      }) as FeatureCollection;
+
+    if (!map.getSource("crm-edit")) {
+      map.addSource("crm-edit", {
+        type: "geojson",
+        data: toFeatureCollection(ring),
+      });
+      map.addLayer({
+        id: "crm-edit-fill",
+        type: "fill",
+        source: "crm-edit",
+        paint: { "fill-color": "#38bdf8", "fill-opacity": 0.18 },
+      });
+      map.addLayer({
+        id: "crm-edit-line",
+        type: "line",
+        source: "crm-edit",
+        paint: { "line-color": "#38bdf8", "line-width": 2 },
+      });
+    }
+
+    const updateSource = () => {
+      const source = map.getSource("crm-edit") as maplibregl.GeoJSONSource | undefined;
+      source?.setData(toFeatureCollection(crmEditRingRef.current));
+    };
+
+    const rebuildMarkers = () => {
+      for (const marker of crmEditMarkersRef.current) marker.remove();
+      crmEditMarkersRef.current = crmEditRingRef.current.map((point, index) => {
+        const element = document.createElement("div");
+        element.style.width = "13px";
+        element.style.height = "13px";
+        element.style.borderRadius = "9999px";
+        element.style.background = "#38bdf8";
+        element.style.border = "2px solid white";
+        element.style.boxShadow = "0 1px 4px rgba(2,6,23,0.6)";
+        element.style.cursor = "grab";
+        element.dataset.crmVertex = String(index);
+        const marker = new maplibregl.Marker({ element, draggable: true })
+          .setLngLat(point)
+          .addTo(map);
+        marker.on("drag", () => {
+          const position = marker.getLngLat();
+          crmEditRingRef.current[index] = [position.lng, position.lat];
+          updateSource();
+        });
+        element.addEventListener("contextmenu", (event) => {
+          event.preventDefault();
+          if (crmEditRingRef.current.length <= 3) return;
+          crmEditRingRef.current.splice(index, 1);
+          setCrmEditVertices(crmEditRingRef.current.length);
+          updateSource();
+          rebuildMarkers();
+        });
+        return marker;
+      });
+    };
+
+    const onClick = (event: maplibregl.MapMouseEvent) => {
+      const points = crmEditRingRef.current;
+      if (points.length < 3) return;
+      const projected = points.map((point) => map.project(point));
+      let best = { index: 0, distance: Infinity, lng: 0, lat: 0 };
+      for (let index = 0; index < points.length; index++) {
+        const a = projected[index];
+        const b = projected[(index + 1) % points.length];
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const lengthSq = dx * dx + dy * dy || 1;
+        const t = Math.max(
+          0,
+          Math.min(1, ((event.point.x - a.x) * dx + (event.point.y - a.y) * dy) / lengthSq)
+        );
+        const px = a.x + dx * t;
+        const py = a.y + dy * t;
+        const distance = Math.hypot(event.point.x - px, event.point.y - py);
+        if (distance < best.distance) {
+          const lngLat = map.unproject([px, py]);
+          best = { index, distance, lng: lngLat.lng, lat: lngLat.lat };
+        }
+      }
+      if (best.distance > 20) return;
+      points.splice(best.index + 1, 0, [best.lng, best.lat]);
+      setCrmEditVertices(points.length);
+      updateSource();
+      rebuildMarkers();
+      event.preventDefault();
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onCrmEditCancelRef.current?.();
+      } else if (event.key === "Enter") {
+        onCrmEditSaveRef.current?.(crmEditRingRef.current);
+      }
+    };
+
+    // Frame the feature so handles are comfortably clickable.
+    const lons = ring.map((point) => point[0]);
+    const lats = ring.map((point) => point[1]);
+    map.fitBounds(
+      [
+        [Math.min(...lons), Math.min(...lats)],
+        [Math.max(...lons), Math.max(...lats)],
+      ],
+      { padding: 160, duration: 400, pitch: 0, bearing: 0 }
+    );
+
+    rebuildMarkers();
+    map.on("click", onClick);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      map.off("click", onClick);
+      window.removeEventListener("keydown", onKeyDown);
+      clearOverlay();
+      crmEditRef.current = false;
+    };
+  }, [crmEdit]);
 
   // Update style when layer mode, 3D toggles, or satellite settings change
   const styleInitializedRef = useRef(false);
@@ -363,10 +917,11 @@ export default function MapComponent({
       createGoogleMapsStyle(
         tileServiceUrl,
         layerMode,
-        show3DBuildings && !enableLoD2Houses,
+        show3DBuildings,
         enableAiSatellite,
         satelliteVintage,
-        enableTrees
+        enableTrees,
+        enableLoD2Houses
       )
     );
     map.once("idle", () => {
@@ -378,6 +933,25 @@ export default function MapComponent({
   useEffect(() => {
     ensureRoofLayer();
   }, [ensureRoofLayer]);
+
+  // Experimental roofline reconstruction for every record (default off)
+  useEffect(() => {
+    roofLayerRef.current?.setRooflines(enableRooflines);
+  }, [enableRooflines]);
+
+  // CRM-corrected roofs are rendered by the map layer, replacing the stale
+  // extracted footprints they replaced.
+  useEffect(() => {
+    let cancelled = false;
+    loadAddressRoofs().then((records) => {
+      if (cancelled) return;
+      addressRecordsRef.current = records;
+      roofLayerRef.current?.setAddressRecords(records);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Feed the selected address's extracted roof record (per-address pipeline)
   // into the Deep 3D Studio, falling back to the tile footprint lookup.
@@ -586,16 +1160,45 @@ export default function MapComponent({
     <div className="w-full h-full relative overflow-hidden">
       {/* MapLibre Canvas */}
       <div ref={mapContainerRef} className="w-full h-full" />
+      {sceneMap && <SceneMapOverlay map={sceneMap} roofLayer={roofLayerRef} threeDimensional={is3DMode && show3DBuildings} onShow3D={() => {
+        setIs3DMode(true); setShow3DBuildings(true); setEnableLoD2Houses(true);
+        sceneMap.easeTo({ pitch: 58, bearing: -24, duration: 800 });
+      }} onSelectLocation={onLocationSelect} interactive={!crmDraw && !crmEdit} />}
+
+      {/* CRM boundary edit toolbar */}
+      {crmEdit && (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center space-x-3 px-4 py-2.5 rounded-2xl bg-slate-900/95 backdrop-blur border border-sky-700/60 shadow-2xl text-slate-100">
+          <div className="text-xs">
+            <div className="font-semibold text-sky-300">Editing boundary</div>
+            <div className="text-[10px] text-slate-400">
+              {crmEditVertices} vertices · drag to move · click an edge to add ·
+              right-click a vertex to remove
+            </div>
+          </div>
+          <button
+            onClick={() => onCrmEditSaveRef.current?.(crmEditRingRef.current)}
+            className="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-xs font-semibold"
+          >
+            Save edit
+          </button>
+          <button
+            onClick={() => onCrmEditCancelRef.current?.()}
+            className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
 
       {/* Floating Google Maps Quick Category Filter Chips */}
       <div className="absolute top-4 left-4 z-10 flex items-center space-x-2 overflow-x-auto max-w-[calc(100%-240px)] scrollbar-none py-0.5">
         {[
-          { label: "🍽️ Restaurants", filter: "restaurant" },
-          { label: "☕ Cafes", filter: "cafe" },
-          { label: "🛒 Shopping", filter: "shop" },
-          { label: "🌳 Parks", filter: "park" },
-          { label: "🎯 Mooroolbark", coords: { lat: -37.79044, lon: 145.31252 } },
-          { label: "🏙️ Melbourne", coords: { lat: -37.8136, lon: 144.9631 } },
+          { label: "Restaurants", icon: Utensils, filter: "restaurant" },
+          { label: "Cafes", icon: Coffee, filter: "cafe" },
+          { label: "Shopping", icon: ShoppingBag, filter: "shop" },
+          { label: "Parks", icon: Trees, filter: "park" },
+          { label: "Mooroolbark", icon: MapPin, coords: { lat: -37.79044, lon: 145.31252 } },
+          { label: "Melbourne", icon: MapPin, coords: { lat: -37.8136, lon: 144.9631 } },
         ].map((chip, idx) => (
           <button
             key={idx}
@@ -612,6 +1215,7 @@ export default function MapComponent({
                 : "bg-white/95 hover:bg-white text-slate-700 hover:text-blue-600 border border-slate-200/90 hover:border-blue-300"
             }`}
           >
+            <chip.icon className="w-3.5 h-3.5" aria-hidden="true" />
             <span>{chip.label}</span>
           </button>
         ))}
@@ -655,6 +1259,8 @@ export default function MapComponent({
           ))}
         </div>
       )}
+
+      {onRequestScene && <button disabled={!!crmDraw || !!crmEdit} onClick={()=>{mapInstanceRef.current?.jumpTo({pitch:0,bearing:0});setIs3DMode(false);setLayerMode("satellite");onRequestScene();}} className="absolute bottom-20 left-4 z-20 flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-xs font-semibold text-slate-800 shadow-md hover:bg-slate-100 disabled:opacity-50 disabled:cursor-default" aria-label="Select a scene area for object review"><Sparkles size={16}/>Review scene area</button>}
 
       {/* Floating Action Tools (Top Right) */}
       <div className="absolute top-4 right-4 z-10 flex items-center space-x-2">
@@ -706,6 +1312,7 @@ export default function MapComponent({
               : "bg-white/95 hover:bg-white text-slate-700 border border-slate-200"
           }`}
           title="Toggle 3D Buildings & Tilt Perspective"
+          aria-pressed={is3DMode && show3DBuildings}
         >
           <Box className={`w-4 h-4 ${is3DMode ? "text-blue-500" : "text-slate-500"}`} />
           <span className="hidden sm:inline">3D</span>
@@ -843,6 +1450,26 @@ export default function MapComponent({
                   </span>
                 </button>
 
+                {/* Experimental roofline reconstruction toggle */}
+                <button
+                  onClick={() => setEnableRooflines(!enableRooflines)}
+                  className={`w-full p-2 rounded-xl border flex items-center justify-between text-xs transition ${
+                    enableRooflines
+                      ? "bg-amber-500/10 border-amber-500/40 text-amber-600 font-semibold"
+                      : isDark
+                      ? "bg-slate-800/40 border-slate-700 text-slate-400"
+                      : "bg-slate-50 border-slate-200 text-slate-500"
+                  }`}
+                >
+                  <div className="flex items-center space-x-2">
+                    <Home className="w-4 h-4 text-amber-500" />
+                    <span>Rooflines (experimental)</span>
+                  </div>
+                  <span className="text-[10px] font-mono font-bold">
+                    {enableRooflines ? "ON" : "OFF"}
+                  </span>
+                </button>
+
                 {/* LoD2 3D Architecture & Volumetric Trees Toggle */}
                 <button
                   onClick={() => setEnableLoD2Houses(!enableLoD2Houses)}
@@ -966,6 +1593,38 @@ export default function MapComponent({
         </div>
       </div>
 
+      {/* CRM boundary drawing hint */}
+      {crmDraw && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 flex items-center space-x-3 px-4 py-2 rounded-full bg-sky-600/95 text-white text-xs font-semibold shadow-xl">
+          {["box","scene"].includes(crmDraw.kind) ? (
+            <span>
+              {crmDraw.kind === "scene" ? "Select scene area (10–250 m)" : "Proposing roof box"} · press-drag-release a rectangle · Esc to cancel
+              {boxAreaM2 > 0 && <> · ~{boxAreaM2.toFixed(0)} m²</>}
+            </span>
+          ) : (
+            <span>
+              Drawing {crmDraw.kind} boundary · click to add points · Finish (or double-click) to
+              save · Esc to cancel ({draftPoints} {draftPoints === 1 ? "point" : "points"})
+            </span>
+          )}
+          {!["box","scene"].includes(crmDraw.kind) && (
+            <button
+              onClick={() => finishDraftRef.current?.()}
+              disabled={draftPoints < 3}
+              className="px-2 py-0.5 rounded-full bg-white/20 hover:bg-white/30 disabled:opacity-40 text-[11px]"
+            >
+              Finish
+            </button>
+          )}
+          <button
+            onClick={() => onCrmDrawCancel?.()}
+            className="px-2 py-0.5 rounded-full bg-white/20 hover:bg-white/30 text-[11px]"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
       {/* Floating AI & 3D Status Badges (Clickable to open Deep 3D Studio) */}
       <div className="absolute bottom-6 right-20 z-10 hidden md:flex items-center space-x-2">
         {layerMode === "satellite" && (
@@ -1022,5 +1681,3 @@ export default function MapComponent({
     </div>
   );
 }
-
-

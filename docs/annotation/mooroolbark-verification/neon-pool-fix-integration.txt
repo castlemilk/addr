@@ -1,0 +1,4 @@
+=== RUN   TestPostgresIntegration
+--- PASS: TestPostgresIntegration (16.12s)
+PASS
+ok  	github.com/benebsworth/addr/internal/annotation	16.132s

@@ -6,12 +6,19 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import {
   generateDeep3DHeightmap,
   loadSatelliteImageOrFallback,
+  latLonToTile,
   Deep3DModelOutput,
   Deep3DBuildingData,
   Deep3DFootprint,
+  Deep3DTerrain,
 } from "@/lib/deep-3d-model";
 import { SatelliteVintage } from "@/lib/google-maps-style";
-import { buildRoofSections } from "@/lib/roof-geometry";
+import {
+  buildRoofSections,
+  buildRooflineMesh,
+  buildWallStrip,
+  roofColorFor,
+} from "@/lib/roof-geometry";
 import { findAddressRoof, loadAddressRoofs } from "@/lib/address-roofs";
 import {
   X,
@@ -40,6 +47,7 @@ interface Deep3DStudioProps {
 }
 
 const TILE_ZOOM = 18;
+const CANVAS_SIZE = 512;
 
 interface BuildingPlacement {
   footprint: Deep3DFootprint;
@@ -50,26 +58,23 @@ interface BuildingPlacement {
 }
 
 function buildingPlacement(building: Deep3DBuildingData): BuildingPlacement {
-  const tileX = Math.floor(((building.centroid.lon + 180) / 360) * 2 ** TILE_ZOOM);
-  const latRad = (building.centroid.lat * Math.PI) / 180;
-  const tileY = Math.floor(
-    ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * 2 ** TILE_ZOOM
-  );
-  const tileCenterLon = ((tileX + 0.5) / 2 ** TILE_ZOOM) * 360 - 180;
-  const tileCenterLat =
-    (Math.atan(Math.sinh(Math.PI * (1 - (2 * (tileY + 0.5)) / 2 ** TILE_ZOOM))) * 180) / Math.PI;
-
   const cosLat = Math.cos((building.centroid.lat * Math.PI) / 180);
-  const metersPerWidth = (40075016.686 * cosLat) / 2 ** TILE_ZOOM;
+  // With centered aerial canvas of size CANVAS_SIZE (512px) at TILE_ZOOM (18):
+  // 512px / 256px = 2 tile spans wide (approx 241.6m in Melbourne)
+  const metersPerTile = (40075016.686 * cosLat) / 2 ** TILE_ZOOM;
+  const metersPerWidth = metersPerTile * (CANVAS_SIZE / 256);
   const metersPerHeight = metersPerWidth;
-  const offsetEast = (building.centroid.lon - tileCenterLon) * 111320 * cosLat;
-  const offsetNorth = (building.centroid.lat - tileCenterLat) * 111320;
+
+  // Since aerial imagery is centered directly on the building centroid,
+  // the building sits at the exact center (u=0.5, v=0.5) with generous terrain margin on all sides.
+  const offsetEast = 0;
+  const offsetNorth = 0;
 
   const ring = building.ringMeters.map(
     ([mx, my]) =>
       [
-        0.5 + (offsetEast + mx) / metersPerWidth,
-        0.5 - (offsetNorth + my) / metersPerHeight,
+        0.5 + mx / metersPerWidth,
+        0.5 - my / metersPerHeight,
       ] as [number, number]
   );
 
@@ -155,6 +160,8 @@ export default function Deep3DStudio({
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
   const meshRef = useRef<THREE.Mesh | null>(null);
+  const terrainGroundRef = useRef(0);
+  const terrainReliefRef = useRef(0);
   const wireframeMeshRef = useRef<THREE.Mesh | null>(null);
   const geometryRef = useRef<THREE.PlaneGeometry | null>(null);
   const texturesRef = useRef<{
@@ -331,19 +338,39 @@ export default function Deep3DStudio({
       const placement = placementRef.current ?? buildingPlacement(bld);
       const sceneUnitsPerMeter = sceneScaleFor(placement);
       const verticalScale = verticalScaleFor(placement, depthScaleRef.current);
-      const { wall, roof } = buildRoofSections({
-        ring: bld.ringMeters,
-        eave: bld.eaveHeight,
-        ridge: bld.ridgeHeight,
-        roofType: bld.roofType,
-        ridgeAngleDeg: bld.ridgeAngle,
-      });
+      const rooflineParts = bld.rooflineParts ?? [];
+      let wall: number[];
+      let roof: number[];
+      if (rooflineParts.length > 0) {
+        roof = buildRooflineMesh(rooflineParts);
+        wall = buildWallStrip(
+          bld.ringMeters,
+          -(1.0 + terrainReliefRef.current),
+          Math.max(1.5, bld.eaveHeight),
+          rooflineParts
+        );
+      } else {
+        ({ wall, roof } = buildRoofSections({
+          ring: bld.ringMeters,
+          eave: bld.eaveHeight,
+          ridge: bld.ridgeHeight,
+          roofType: bld.roofType,
+          ridgeAngleDeg: bld.ridgeAngle,
+          baseDrop: 1.0 + terrainReliefRef.current,
+          simplifyTolerance: 1.0,
+          minSectionArea: 20,
+          maxSections: 1,
+        }));
+      }
       const toScene = (positions: number[]): THREE.BufferGeometry | null => {
         if (positions.length === 0) return null;
         const out = new Float32Array(positions.length);
         for (let index = 0; index < positions.length; index += 3) {
           out[index] = positions[index] * sceneUnitsPerMeter;
-          out[index + 1] = positions[index + 2] * verticalScale + 0.06;
+          out[index + 1] =
+            positions[index + 2] * verticalScale +
+            0.06 +
+            terrainGroundRef.current * verticalScale;
           out[index + 2] = -positions[index + 1] * sceneUnitsPerMeter;
         }
         const geometry = new THREE.BufferGeometry();
@@ -356,10 +383,42 @@ export default function Deep3DStudio({
       if (wallGeometry) group.add(new THREE.Mesh(wallGeometry, materials.wall));
       if (roofGeometry) {
         materials.roof.color.set(
-          bld.roofType === "gabled" ? 0xa84a2d : bld.roofType === "flat" ? 0x7c8794 : 0x4b5563
+          roofColorFor(
+            bld.roofMaterial,
+            bld.roofType === "gabled"
+              ? 0xa84a2d
+              : bld.roofType === "flat"
+              ? 0x7c8794
+              : 0x4b5563
+          )
         );
         group.add(new THREE.Mesh(roofGeometry, materials.roof));
       }
+
+      // Property Cadastral Boundary (parcel lot boundary outline)
+      const parcelRing = bld.parcelRingMeters ?? null;
+      if (parcelRing && parcelRing.length >= 3) {
+        const boundaryPts: THREE.Vector3[] = [];
+        for (const [bx, by] of parcelRing) {
+          boundaryPts.push(
+            new THREE.Vector3(
+              bx * sceneUnitsPerMeter,
+              0.08 + terrainGroundRef.current * verticalScale,
+              -by * sceneUnitsPerMeter
+            )
+          );
+        }
+        boundaryPts.push(boundaryPts[0].clone()); // close loop
+        const boundaryGeo = new THREE.BufferGeometry().setFromPoints(boundaryPts);
+        const boundaryMat = new THREE.LineBasicMaterial({
+          color: 0x38bdf8,
+          linewidth: 2,
+          transparent: true,
+          opacity: 0.85,
+        });
+        group.add(new THREE.Line(boundaryGeo, boundaryMat));
+      }
+
       console.info(
         `[Deep3D] roof mesh: ${wallGeometry ? wall.length / 9 : 0} wall tris, ` +
           `${roofGeometry ? roof.length / 9 : 0} roof tris, scale ${sceneUnitsPerMeter.toFixed(3)} u/m`
@@ -384,12 +443,34 @@ export default function Deep3DStudio({
         const placement = bld ? buildingPlacement(bld) : null;
         placementRef.current = placement;
 
-        // Load real satellite tile or high-res procedural orthophoto
+        // Load centered satellite canvas with generous margin for full property boundary
         const imgSource = await loadSatelliteImageOrFallback(
           bld?.centroid.lat ?? lat,
           bld?.centroid.lon ?? lon,
-          vnt
+          vnt,
+          TILE_ZOOM,
+          CANVAS_SIZE
         );
+        if (runId !== runIdRef.current) return;
+
+        // Real terrain relief (relative depth from the ML generator) so the
+        // carve and mesh seat on the property's gradient.
+        let terrain: Deep3DTerrain | null = null;
+        try {
+          const tile = latLonToTile(
+            bld?.centroid.lat ?? lat,
+            bld?.centroid.lon ?? lon,
+            TILE_ZOOM
+          );
+          const response = await fetch(
+            `/api/depth?z=${tile.z}&x=${tile.x}&y=${tile.y}`
+          );
+          if (response.ok) {
+            terrain = (await response.json()) as Deep3DTerrain;
+          }
+        } catch {
+          terrain = null;
+        }
         if (runId !== runIdRef.current) return;
 
         const output = await generateDeep3DHeightmap({
@@ -401,10 +482,14 @@ export default function Deep3DStudio({
           footprint: placement?.footprint,
           metersPerWidth: placement?.metersPerWidth,
           metersPerHeight: placement?.metersPerHeight,
+          terrain,
+          terrainReliefMeters: 8,
         });
         if (runId !== runIdRef.current) return;
 
         setModelOutput(output);
+        terrainGroundRef.current = output.metrics.groundHeightMeters ?? 0;
+        terrainReliefRef.current = output.metrics.groundReliefMeters ?? 0;
 
         // Extract the cross-section through the building when known
         const slice: number[] = [];
@@ -486,12 +571,12 @@ export default function Deep3DStudio({
     );
     const span = spanMeters * sceneUnitsPerMeter;
     const ridgeScene = Math.max(0.5, (ridgeHeight - 0) * verticalScale);
-    const distance = Math.max(8, span * 2.0, ridgeScene * 3.0);
+    const distance = Math.max(8, span * 2.2, ridgeScene * 3.0);
 
     camera.position.set(0, distance * 0.5, distance * 0.8);
     controls.target.set(0, Math.max(0.5, ridgeScene * 0.35), 0);
     controls.minDistance = Math.max(3, span * 0.35);
-    controls.maxDistance = Math.max(30, distance * 3.2);
+    controls.maxDistance = Math.max(60, distance * 5.0);
     controls.update();
   }, [modelOutput, ridgeHeight]);
 
@@ -1122,6 +1207,13 @@ export default function Deep3DStudio({
                 <span className="text-[10px] text-slate-400 uppercase">Tree Canopy</span>
                 <div className="text-base font-bold font-mono text-emerald-300 mt-0.5">
                   {modelOutput?.metrics.canopyHeightMeters ?? 10.8} m
+                </div>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800">
+                <span className="text-[10px] text-slate-400 uppercase">Ground Level</span>
+                <div className="text-base font-bold font-mono text-amber-200 mt-0.5">
+                  {modelOutput?.metrics.groundHeightMeters ?? 0} m
                 </div>
               </div>
             </div>

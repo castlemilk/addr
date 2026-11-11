@@ -1,0 +1,134 @@
+{
+  "verifiedAt": "2026-09-27T07:36:41.716765+00:00",
+  "localApp": "http://localhost:3008",
+  "localBuildId": "IrQEj0E6xlz8BivPmm680",
+  "cloudOrigin": "https://fieldwork-annotations.ben-ebsworth.workers.dev",
+  "projectId": "mooroolbark",
+  "snapshotId": "6d8811d04524eeb196c654ac3647fb32f11d14813f4ff58eb1fb5a747f238572",
+  "cursor": "538",
+  "packetDigest": "bcdf61429bf24afef27447bd6bc8f673e606c7779e70b6683d09a62e64f18f30",
+  "packetFile": "/Users/benebsworth/projects/addr/data/fieldwork-sync/mooroolbark/feedback.json",
+  "actualFeedback": {
+    "entries": 0,
+    "quarantined": 0,
+    "syncChanges": 0,
+    "preview": {
+      "scenes": 0,
+      "objects": 0,
+      "drafts": 0,
+      "notesOnly": 0,
+      "receiptOnly": 0,
+      "conflicts": 0
+    },
+    "canApply": true
+  },
+  "realSourceSimulation": {
+    "sceneId": "house-30296",
+    "objectId": "2356141b48e64358",
+    "simulated": true,
+    "applied": false,
+    "canApply": true,
+    "counts": {
+      "scenes": 1,
+      "objects": 1,
+      "drafts": 0,
+      "notesOnly": 1,
+      "receiptOnly": 0,
+      "conflicts": 0
+    },
+    "bundleDigest": "a18c80bbe5b70740787f7bcc38e0fae40536a2ea07c610be327907cac0f40634"
+  },
+  "localParity": {
+    "files": 744,
+    "unchanged": true,
+    "sha256": "d8c2c4048b91a6385c5c5b721bb4b3fbaefa4c8f6f963c89803f0035f9c927ef"
+  },
+  "trainingAuthority": {
+    "scenes": 562,
+    "previousOutlineReferences": 375,
+    "currentOutlineReferences": 274,
+    "excludedMachineReferences": 101,
+    "excludedSource": "machine:decision-policy-v2",
+    "falsePositives": 194,
+    "exportRun": false,
+    "trainingRun": false
+  },
+  "checks": {
+    "goTransportTests": "passed",
+    "goVet": "passed",
+    "focusedPythonTests": 39,
+    "focusedImporterIntegrationTests": 10,
+    "existingSceneAPIRegression": "passed",
+    "typescript": "passed",
+    "focusedESLint": "passed",
+    "focusedRuff": "passed",
+    "productionBuild": "passed using normal Turbopack in a clean staging directory",
+    "defaultTaskPull": "passed",
+    "emptyPlanApply": "passed",
+    "singleCommandWrapperMCPTests": 32,
+    "adversarialReview": "passed"
+  },
+  "limitations": [
+    "Local reconciliation supports addr-scene; other adapters retain generic sync/export.",
+    "Substantive imports require local review before label eligibility; roof targets need separate checks.",
+    "A hard-killed canonical writer can leave review.lock; confirm no active writer before stale-lock recovery."
+  ],
+  "singleCommandPull": {
+    "command": "task pull",
+    "alias": "task feedback:pull",
+    "mcpTool": "pull_fieldwork_feedback",
+    "automaticApply": true,
+    "automaticSafeResume": true,
+    "manualPlanIdRequired": false,
+    "cliResult": {
+      "status": "up_to_date",
+      "projectId": "mooroolbark",
+      "cursor": "538",
+      "packetFile": "/Users/benebsworth/projects/addr/data/fieldwork-sync/mooroolbark/feedback.json",
+      "counts": {
+        "changes": 0,
+        "items": 0,
+        "appliedScenes": 0,
+        "alreadyAppliedScenes": 0,
+        "receiptOnly": 0,
+        "conflicts": 0
+      },
+      "reviewUrls": [],
+      "conflicts": []
+    },
+    "mcpResult": {
+      "status": "up_to_date",
+      "projectId": "mooroolbark",
+      "cursor": "538",
+      "packetFile": "/Users/benebsworth/projects/addr/data/fieldwork-sync/mooroolbark/feedback.json",
+      "counts": {
+        "changes": 0,
+        "items": 0,
+        "appliedScenes": 0,
+        "alreadyAppliedScenes": 0,
+        "receiptOnly": 0,
+        "conflicts": 0
+      },
+      "reviewUrls": [],
+      "conflicts": []
+    },
+    "selectedRealSourcePreview": {
+      "simulated": true,
+      "applied": false,
+      "planId": "7a997594e58fabcc03b50d11367f75ed6cc5248f620ea95d4fb5c4911be1e2cf",
+      "bundleDigest": "a18c80bbe5b70740787f7bcc38e0fae40536a2ea07c610be327907cac0f40634",
+      "canApply": true,
+      "counts": {
+        "scenes": 1,
+        "objects": 1,
+        "drafts": 0,
+        "notesOnly": 1,
+        "receiptOnly": 0,
+        "conflicts": 0
+      }
+    },
+    "localFilesChecked": 744,
+    "localFilesUnchanged": true,
+    "buildNotes": "Direct builds scanned runtime data. A clean staged copy of identical app sources and installed dependencies compiled with Turbopack in 6 seconds and passed TypeScript; its artifact was installed and started from the original repository. Local scene UI returned HTTP 200, then CLI/MCP live pulls and source-bound preview passed."
+  }
+}

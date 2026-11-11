@@ -1,0 +1,848 @@
+{
+  "checkedAt": "2026-09-27T05:11:58Z",
+  "workerVersion": "eb12acbb-bb33-4a0e-9f53-d86f42381243",
+  "containerVersion": 7,
+  "containerImage": "sha256:1bc1e77fb22002fba106cb4bb36e800f828b3448850fbc41e5c4b59ece415c3a",
+  "uiBundle": "index-C_l181Xb.js",
+  "cause": "PostgreSQL SQLSTATE08P01: pooled connection reused an unnamed prepared statement with a different parameter count.",
+  "fix": "Use lib/pq native configuration with BinaryParameters=true, keeping parameter binding within a single extended-protocol exchange; no credential, schema, or document changes.",
+  "before": {
+    "startedAt": "2026-09-27T05:01:58Z",
+    "finishedAt": "2026-09-27T05:02:13Z",
+    "method": "GetItem",
+    "concurrency": 8,
+    "requests": 64,
+    "retries": 0,
+    "statuses": {
+      "200": 51,
+      "500": 13
+    },
+    "results": [
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 2.659,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 2.019,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 2.799,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.433,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 2.495,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 3.123,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 2.526,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 2.041,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.915,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.493,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.48,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.381,
+        "error": {}
+      },
+      {
+        "httpStatus": 500,
+        "curlExit": 0,
+        "seconds": 0.728,
+        "error": {
+          "code": "internal",
+          "message": "annotation storage request failed"
+        }
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.049,
+        "error": {}
+      },
+      {
+        "httpStatus": 500,
+        "curlExit": 0,
+        "seconds": 0.772,
+        "error": {
+          "code": "internal",
+          "message": "annotation storage request failed"
+        }
+      },
+      {
+        "httpStatus": 500,
+        "curlExit": 0,
+        "seconds": 0.687,
+        "error": {
+          "code": "internal",
+          "message": "annotation storage request failed"
+        }
+      },
+      {
+        "httpStatus": 500,
+        "curlExit": 0,
+        "seconds": 0.447,
+        "error": {
+          "code": "internal",
+          "message": "annotation storage request failed"
+        }
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.571,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.237,
+        "error": {}
+      },
+      {
+        "httpStatus": 500,
+        "curlExit": 0,
+        "seconds": 0.647,
+        "error": {
+          "code": "internal",
+          "message": "annotation storage request failed"
+        }
+      },
+      {
+        "httpStatus": 500,
+        "curlExit": 0,
+        "seconds": 0.475,
+        "error": {
+          "code": "internal",
+          "message": "annotation storage request failed"
+        }
+      },
+      {
+        "httpStatus": 500,
+        "curlExit": 0,
+        "seconds": 0.718,
+        "error": {
+          "code": "internal",
+          "message": "annotation storage request failed"
+        }
+      },
+      {
+        "httpStatus": 500,
+        "curlExit": 0,
+        "seconds": 0.647,
+        "error": {
+          "code": "internal",
+          "message": "annotation storage request failed"
+        }
+      },
+      {
+        "httpStatus": 500,
+        "curlExit": 0,
+        "seconds": 0.548,
+        "error": {
+          "code": "internal",
+          "message": "annotation storage request failed"
+        }
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 2.282,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 2.53,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.079,
+        "error": {}
+      },
+      {
+        "httpStatus": 500,
+        "curlExit": 0,
+        "seconds": 0.646,
+        "error": {
+          "code": "internal",
+          "message": "annotation storage request failed"
+        }
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.831,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.55,
+        "error": {}
+      },
+      {
+        "httpStatus": 500,
+        "curlExit": 0,
+        "seconds": 0.819,
+        "error": {
+          "code": "internal",
+          "message": "annotation storage request failed"
+        }
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.093,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 2.331,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.775,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.57,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.327,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.208,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 0.803,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.144,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 0.92,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.461,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 0.789,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.506,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 0.94,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.356,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 0.788,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 0.794,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 0.872,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 2.322,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.684,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 2.149,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.877,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.701,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.986,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.552,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 2.864,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 3.045,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 4.155,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.548,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.437,
+        "error": {}
+      },
+      {
+        "httpStatus": 500,
+        "curlExit": 0,
+        "seconds": 0.983,
+        "error": {
+          "code": "internal",
+          "message": "annotation storage request failed"
+        }
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.535,
+        "error": {}
+      },
+      {
+        "httpStatus": 500,
+        "curlExit": 0,
+        "seconds": 0.564,
+        "error": {
+          "code": "internal",
+          "message": "annotation storage request failed"
+        }
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.891,
+        "error": {}
+      }
+    ]
+  },
+  "after": {
+    "startedAt": "2026-09-27T05:10:56Z",
+    "finishedAt": "2026-09-27T05:11:09Z",
+    "method": "GetItem",
+    "concurrency": 8,
+    "requests": 64,
+    "retries": 0,
+    "statuses": {
+      "200": 64
+    },
+    "results": [
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.432,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 2.979,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 2.67,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 2.671,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 3.544,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 3.564,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 3.497,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 2.667,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 2.302,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.692,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 2.211,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.466,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.427,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.595,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.331,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.049,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.555,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 3.32,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.273,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.695,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 0.967,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.709,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 2.48,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.341,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.244,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.625,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.776,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.427,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.767,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.923,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.544,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.267,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.172,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 0.945,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 0.894,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 2.355,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 0.493,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 0.445,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 0.31,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 0.317,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 0.247,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 0.261,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 0.689,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.737,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 0.742,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 0.668,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 0.929,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 0.599,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.257,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.342,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 0.804,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.386,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.339,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.045,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.18,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.059,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 0.914,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.124,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.114,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.366,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 0.835,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 0.957,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.693,
+        "error": {}
+      },
+      {
+        "httpStatus": 200,
+        "curlExit": 0,
+        "seconds": 1.28,
+        "error": {}
+      }
+    ]
+  },
+  "coldReadiness": {
+    "httpStatus": 200,
+    "seconds": 1.252617
+  },
+  "resolved": true
+}

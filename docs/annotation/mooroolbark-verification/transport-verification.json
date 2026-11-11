@@ -1,0 +1,41 @@
+{
+  "assetTimeoutSeconds": 600,
+  "apiTimeoutSeconds": 120,
+  "headTimeoutSeconds": 30,
+  "assetAttempts": 4,
+  "retryBackoffSeconds": [
+    1,
+    2,
+    4
+  ],
+  "uploadConcurrency": 32,
+  "largeAssetThresholdBytes": 8388608,
+  "largeAssetWorkers": 2,
+  "http1Trial": true,
+  "retriesReopenExactSourceBodies": true,
+  "retriesRecheckCommittedHashes": true,
+  "partialDownloadsResetBeforeRetry": true,
+  "authenticationAndIntegrityFailuresRetried": false,
+  "focusedTests": "go test ./internal/annotation/migration ./cmd/annotation-migrate",
+  "focusedTestsPassed": true,
+  "independentTransportReview": "No material integrity, retry or cancellation blocker found.",
+  "transport-probe": {
+    "sha256": "f501e4dfa73a659eb9284ea52516183385770622310640fed208c87f17f2d316",
+    "bytes": 1383550,
+    "status": 201,
+    "seconds": 6.448861,
+    "bytesPerSecond": 214541.0,
+    "transmittedBytes": 1383550,
+    "scope": "One real frozen PNG uploaded as part of the approved dataset; importer resumes by hash."
+  },
+  "transport-http1": {
+    "sha256": "fdeac8011ebe1e296c3ba70bf7d744e413fa0b61979b60544993373f42aef7b6",
+    "bytes": 1152500,
+    "status": 201,
+    "seconds": 7.188862,
+    "bytesPerSecond": 160317.0,
+    "transmittedBytes": 1152500,
+    "protocol": "1.1",
+    "scope": "One real frozen PNG uploaded through HTTP/1.1 as part of the approved dataset."
+  }
+}

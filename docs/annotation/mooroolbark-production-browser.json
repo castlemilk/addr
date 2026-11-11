@@ -1,0 +1,84 @@
+{
+  "checkedAt": "2026-09-27T04:47:19Z",
+  "origin": "https://fieldwork-annotations.ben-ebsworth.workers.dev",
+  "workerVersion": "651215d2-c772-4f14-87cb-032cbe201a8d",
+  "frontendEntry": "index-C_l181Xb.js",
+  "scope": "Read-only browser checks against the imported production dataset; no Mooroolbark revisions were changed.",
+  "viewports": [
+    {
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390
+    }
+  ],
+  "finalInitialExampleLoadSucceeded": true,
+  "finalProjectSelectionAutomaticallyOpenedDatasetReport": true,
+  "queuePageSize": 20,
+  "loadMoreResult": "40+ loaded items; no duplicate entry for a scene opened from the report",
+  "serverSearch": "24 CAMBRIDGE returned the matching scene",
+  "overview": {
+    "inventoryRoofs": 10339,
+    "completedScanTiles": 257,
+    "eligibleValidationLayers": 0,
+    "evidenceBands": {
+      "high": 31,
+      "low": 1892,
+      "medium": 8416
+    }
+  },
+  "roofMap": {
+    "authenticatedAssetLoaded": true,
+    "roofCount": 10339,
+    "highFilterCount": 31,
+    "exactObjectNavigation": "house-30296/2356141b48e64358"
+  },
+  "scene": {
+    "title": "24 CAMBRIDGE ROAD, Mooroolbark VIC 3138",
+    "itemId": "addr-scene-house-30296",
+    "annotations": 90,
+    "fieldworkRevision": 1,
+    "sourceReviewRevision": 3,
+    "matchingSourceFrame": true,
+    "protectedImageryVisible": true,
+    "roofLineViewVisible": true,
+    "threeDimensionalViewRendered": true,
+    "sourceObjectId": "2356141b48e64358",
+    "sourceRoofParts": 8,
+    "sourceRoofLines": 12,
+    "sourceRoofAnnotationPresent": true,
+    "fieldworkOverrides": "Not recorded",
+    "phoneInspectorReachable": true
+  },
+  "earlierDiagnostics": {
+    "storageErrorsObservedDuringImportBeforeFinalUI": true,
+    "underlyingCauseEstablished": true,
+    "manualItemOpenAndDirectRESTReadsSucceeded": true,
+    "largeQueueResponseBytes": 8202735,
+    "largeQueueResponseSeconds": 34.886,
+    "finalQueueChanges": "20-item pages, no duplicate initial fetch, project-preserving retry and queue reset",
+    "finalAutomaticLoadAndPaginationSucceeded": true,
+    "resolution": "Neon transaction-pool protocol mismatch; corrected with lib/pq BinaryParameters=true. See mooroolbark-verification/production-protocol-fix-verification.json."
+  },
+  "screenshots": [
+    "mooroolbark-production-3d.jpg",
+    "mooroolbark-production-mobile.jpg",
+    "mooroolbark-production-overview-mobile.jpg"
+  ],
+  "finalServerRecheck": {
+    "checkedAt": "2026-09-27T05:13:00Z",
+    "workerVersion": "eb12acbb-bb33-4a0e-9f53-d86f42381243",
+    "initialExampleLoadSucceeded": true,
+    "projectSelectionAutomaticallyOpenedDatasetReport": true,
+    "queueLoaded": 20,
+    "inventoryRoofs": 10339,
+    "completedScanTiles": 257,
+    "eligibleValidationLayers": 0,
+    "reportRevision": 1,
+    "visibleError": false,
+    "writesMade": false
+  }
+}

@@ -1,6 +1,12 @@
 numpy>=1.26
 Pillow>=10.0
-shapely>=2.0
+shapely>=2.1
+scipy>=1.13
 requests>=2.31
 onnxruntime>=1.17
 huggingface_hub>=0.24
+mcp>=2.0
+openai-mcp-extensions==0.1.0
+opencv-python-headless>=4.10
+py_straight_skeleton==0.1.0
+rapidocr-onnxruntime==1.4.4  # structure_kinds_optical scene-text pass (ONNX, CPU)

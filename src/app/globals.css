@@ -1,4 +1,25 @@
-@import "tailwindcss";
+/* Keep utility discovery in app source; generated ML datasets are not UI code. */
+@import "tailwindcss" source("../");
+
+.building-address-summary { margin: 12px 0; padding: 12px 14px; border: 1px solid #2d4255; border-radius: 8px; background: #101f2e; font-size: 13px; color: #b6c8d8; }
+.building-address-summary > strong { color: #84dcda; font-size: 12px; }
+.building-address-summary p { margin: 6px 0; line-height: 1.5; }
+.building-address-summary small { display: block; margin-top: 8px; font-size: 11px; }
+.building-address-summary a { text-decoration: underline; text-underline-offset: 3px; }
+.building-address-summary summary { cursor: pointer; margin: 8px 0; }
+.building-address-summary ul { max-height: 180px; overflow: auto; padding-left: 20px; }
+.building-address-summary li { margin: 4px 0; }
+.address-resolution-editor { border-top: 1px solid #34485c; margin-top: 12px; padding-top: 12px; }
+.address-resolution-editor fieldset { border: 0; padding: 0; margin: 0 0 10px; min-width: 0; }
+.address-resolution-editor legend { color: #d6e4f0; margin-bottom: 8px; }
+.address-resolution-editor label { display: grid; gap: 6px; margin: 10px 0; }
+.address-resolution-candidates { max-height: 240px; overflow: auto; }
+.address-resolution-candidates label { display: flex; align-items: flex-start; gap: 10px; }
+.address-resolution-candidates input { margin-top: 4px; accent-color: #6ad6d9; }
+.address-resolution-editor textarea, .address-resolution-editor select { width: 100%; min-width: 0; padding: 8px; background: #0b1725; color: #d6e4f0; border: 1px solid #42566a; border-radius: 5px; }
+.address-resolution-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.address-resolution-editor button { padding: 7px 10px; border: 1px solid #42566a; border-radius: 5px; }
+.address-resolution-editor button:disabled { opacity: .45; cursor: not-allowed; }
 @import "leaflet/dist/leaflet.css";
 @import "maplibre-gl/dist/maplibre-gl.css";
 
@@ -10,9 +31,16 @@
 body {
   background-color: #090d16;
   color: #f8fafc;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  /* Geist everywhere (layout.tsx sets the variable); MapLibre canvas labels use the style's own glyphs. */
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
   overflow-x: hidden;
 }
+
+/* Map sidebar header: the workspace nav measures 526px in Geist. The sidebar is 640px from the xl
+   breakpoint so the whole row shows; below that (460px sidebar, phones) the nav scrolls inside its
+   row, mirroring shell.css below 650px. Links stay keyboard-reachable; focus scrolls them into view. */
+.map-shell-nav { overflow-x: auto; scrollbar-width: none; }
+.map-shell-nav::-webkit-scrollbar { display: none; }
 
 /* MapLibre GL Controls & Google Maps Look and Feel */
 .maplibregl-ctrl-group {
@@ -88,4 +116,25 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+/* Shared operable scrollbars and keyboard focus across map, CRM and reviews. */
+:root {
+  --scrollbar-thumb: #64748b;
+  --scrollbar-track: #0f172a;
+  --scrollbar-hover: #94a3b8;
+  --scrollbar-active: #cbd5e1;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  scrollbar-width: thin;
+}
+::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); }
+::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+::-webkit-scrollbar-thumb:active { background: var(--scrollbar-active); }
+::selection { background: #164e63; color: #ecfeff; }
+:where(button, a, input, select, textarea):focus-visible { outline: 2px solid #67d7e7; outline-offset: 3px; }
+:where(button, a, select):not(:disabled) { cursor: pointer; }
+@media (forced-colors: active) {
+  :root { scrollbar-color: auto; }
+  :focus-visible { outline-color: Highlight; }
 }

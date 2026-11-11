@@ -1,0 +1,4 @@
+interface:
+  display_name: "Addr roof and object tracing"
+  short_description: "Trace roofs and vegetation; review finer object segments"
+  default_prompt: "Use $addr-roof-tracing to review the object's full boundary against original imagery, refine or split supported parts, and show the saved draft comparison."

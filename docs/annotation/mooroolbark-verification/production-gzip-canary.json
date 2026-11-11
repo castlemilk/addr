@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-09-27T03:56:38Z",
+  "snapshotId": "6d8811d04524eeb196c654ac3647fb32f11d14813f4ff58eb1fb5a747f238572",
+  "workerVersion": "caad3b57-4b79-43dc-b576-cc7ac9a1b33a",
+  "sha256": "c818073688e9f7efa090e3e482d2019837e7c2cb68d025f86d1ea137ac5f800f",
+  "missingBefore": true,
+  "advertisedGzip": true,
+  "originalBytes": 67108864,
+  "wireBytes": 4832026,
+  "savedBytes": 62276838,
+  "putStatus": 201,
+  "putSeconds": 104.423271,
+  "getSeconds": 68.686952,
+  "downloadBytes": 67108864,
+  "originalSHA256Matched": true,
+  "identityRepresentation": true
+}

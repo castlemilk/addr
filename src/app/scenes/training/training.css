@@ -1,0 +1,114 @@
+/* Training workspace pages share the app shell header. reviews.css and shell.css style .review-header at
+   equal specificity and Next merges page CSS in import order per route, so the scoped rule below keeps the
+   52px shell row whichever file lands last (same pattern as processing.css; shell.css owns .workbench-*). */
+.training-shell .review-header { min-height: 52px; padding: 0 24px; gap: 0 16px; flex-wrap: wrap; }
+/* The nav is ~510px wide; with three page actions the row runs out at tablet widths, so the actions drop
+   to their own 52px row instead of overlapping the nav. Three classes so this wins over shell.css at 650px. */
+.training-shell .review-header .review-header-actions { min-height: 52px; padding-bottom: 0; }
+@media (max-width: 650px) { .training-shell .review-header { padding: 0 12px; gap: 0 10px; } }
+.training-content { max-width: 1240px; margin: 0 auto; padding: 34px 28px 56px; }
+.training-roof-runs { margin: 26px 0; padding-block: 4px 22px; border-block: 1px solid var(--review-line); scroll-margin-top: 20px; }
+.training-roof-runs .training-explainer { margin: 10px 0 18px; }
+.training-roof-runs :is(h3,h4) { font-weight: 600; }
+.training-roof-runs .review-muted { font-size: 12px; line-height: 1.7; margin-block: 10px; }
+.training-roof-runs .training-table :is(td,tbody th) { padding: 13px 16px; font-size: 12px; }
+.training-roof-runs .training-table tbody th { width: auto; }
+.training-run-select { display: block; max-width: 480px; font-size: 12px; }
+.training-run-select select { display: block; width: 100%; margin-top: 8px; }
+.training-run-status { margin-top: 18px; font-weight: 500; }
+.training-run-gaps { margin-block: 18px; font-size: 12px; }
+.training-run-gaps ul { margin: 8px 0 0 18px; list-style: disc; color: var(--review-muted); }
+.training-run-results { margin: 22px 0; }
+.training-run-results h4 { font-size: 12px; }
+.training-run-results dl { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 12px; }
+.training-run-results dt { color: var(--review-muted); font-size: 11px; }
+.training-run-results dd { margin-top: 5px; font-size: 23px; font-variant-numeric: tabular-nums; }
+.training-run-exclusions, .training-run-provenance { font-size: 12px; margin-top: 18px; }
+.training-roof-runs summary { cursor: pointer; width: fit-content; }
+.training-run-exclusions li { margin-top: 12px; }
+.training-run-exclusions a { color: var(--review-accent); text-decoration: underline; text-underline-offset: 3px; }
+.training-run-exclusions span { display: block; color: var(--review-muted); margin-top: 3px; }
+.training-run-provenance p { margin-top: 12px; color: var(--review-muted); }
+.training-run-command { display: block; margin-top: 12px; padding: 12px; background: var(--review-surface); border-radius: 6px; overflow-wrap: anywhere; }
+.training-heading { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.training-heading h1 { font-size: clamp(20px, 2vw, 28px); line-height: 1.25; letter-spacing: -.025em; font-weight: 600; margin: 0 0 8px; }
+.training-heading p, .training-explainer, .training-export p { color: var(--review-muted); }
+.training-feedback { min-height: 48px; padding: 12px 0; color: var(--review-muted); font-size: 12px; }
+.training-feedback .review-notice { margin: 0; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.training-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-block: 1px solid var(--review-line); padding: 22px 0; gap: 18px; }
+.training-metrics dt { color: var(--review-muted); font-size: 12px; }
+.training-metrics dd { font-size: 32px; font-weight: 500; font-variant-numeric: tabular-nums; margin-top: 4px; }
+.training-explainer { font-size: 12px; max-width: 850px; margin: 16px 0 28px; line-height: 1.7; }
+.training-section-title { display: flex; align-items: baseline; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin: 26px 0 12px; }
+.training-section-title span { color: var(--review-muted); font-size: 11px; }
+.training-table-scroll { overflow-x: auto; border: 1px solid var(--review-line); border-radius: 8px; }
+.training-table { width: 100%; min-width: 650px; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.training-table thead { background: var(--review-surface); color: var(--review-muted); font-size: 11px; text-align: left; }
+.training-table th, .training-table td { padding: 0; border-bottom: 1px solid var(--review-line); }
+.training-table thead th { padding: 13px 16px; font-weight: 500; }
+.training-table tbody tr:last-child :is(th,td) { border-bottom: 0; }
+.training-table tbody th { width: 23%; text-align: left; font-weight: 500; }
+.training-table button { min-height: 58px; width: 100%; padding: 10px 16px; text-align: left; }
+.training-table button:hover { background: var(--review-raised); }
+.training-table button:focus-visible { outline-offset: -3px; }
+.training-table .is-selected { background: var(--review-surface); }
+.training-table .is-selected th { box-shadow: inset 3px 0 var(--review-accent); color: var(--review-accent); }
+.training-table small { display: block; color: var(--review-muted); font-size: 11px; font-weight: 400; margin-top: 2px; }
+.training-table strong { font-weight: 500; }
+.training-table strong span { color: var(--review-muted); margin-inline: 3px; }
+.training-table td:last-child button { display: flex; gap: 8px; align-items: center; }
+.training-layer-section { scroll-margin-top: 20px; }
+.training-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 22px; }
+.training-filters select { display: block; margin-top: 8px; }
+.training-layer-list { border-top: 1px solid var(--review-line); }
+.training-layer-list li { display: flex; gap: 20px; align-items: center; padding: 22px 0; border-bottom: 1px solid var(--review-line); }
+.training-layer-list img { width: 112px; height: 112px; object-fit: cover; border-radius: 6px; background: var(--review-surface); flex-shrink: 0; }
+.training-layer-info { flex: 1; min-width: 0; }
+.training-layer-info h3 { font-weight: 600; font-size: 14px; }
+.training-layer-info p { color: var(--review-muted); font-size: 12px; margin-top: 6px; overflow-wrap: anywhere; }
+.training-layer-info .training-scan, .training-layer-info details { font-size: 11px; }
+.training-layer-info details { margin-top: 10px; color: var(--review-muted); }
+.training-layer-info summary { cursor: pointer; width: fit-content; }
+.training-layer-action { display: flex; align-items: flex-end; flex-direction: column; gap: 12px; font-size: 12px; }
+.training-empty { border: 1px dashed var(--review-line); border-radius: 8px; padding: 28px; }
+.training-empty h3 { font-weight: 600; }
+.training-empty p { color: var(--review-muted); margin: 8px 0 18px; }
+.training-export { margin-top: 32px; padding-top: 22px; border-top: 1px solid var(--review-line); }
+.training-export p { margin-top: 8px; font-size: 12px; }
+.training-export code { display: inline-block; margin-top: 10px; color: var(--review-accent); }
+.training-path { overflow-wrap: anywhere; }
+.training-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.training-evaluation {margin:22px 0 28px;padding:18px;border:1px solid var(--review-line);border-radius:8px;background:var(--review-surface);}
+.training-evaluation h3 {font-size:14px;font-weight:600;}
+.training-evaluation .training-explainer {margin:8px 0 16px;}
+.evaluation-table {width:100%;min-width:780px;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums;}
+.evaluation-table :is(th,td) {text-align:left;padding:12px;border-bottom:1px solid var(--review-line);}
+.evaluation-table thead {font-size:11px;color:var(--review-muted);}
+.evaluation-table th {font-weight:500;}
+.evaluation-table small {display:block;color:var(--review-muted);font-weight:400;margin-top:4px;}
+.evaluation-method,.evaluation-images {margin-top:14px;font-size:12px;}
+.training-evaluation summary {cursor:pointer;width:fit-content;}
+.evaluation-method p,.evaluation-images p,.evaluation-images small {color:var(--review-muted);margin-top:8px;}
+.evaluation-images li {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;border-top:1px solid var(--review-line);padding:14px 0;}
+.evaluation-scroll-hint {display:none;color:var(--review-muted);font-size:11px;margin-top:8px;}
+@media(max-width: 800px) {
+  .evaluation-scroll-hint {display:block;}
+  .training-heading { align-items: flex-start; flex-direction: column; }
+  .training-layer-list li { flex-wrap: wrap; gap: 14px; }
+  .training-layer-action { width: 100%; flex-direction: row; align-items: center; justify-content: space-between; }
+}
+@media(max-width: 650px) {
+  .training-content { padding: 26px 16px 40px; }
+  .training-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .training-filters { grid-template-columns: 1fr; gap: 6px; }
+  .training-layer-list img { width: 80px; height: 80px; }
+  .training-layer-action { align-items: flex-start; gap: 12px; }
+  .training-layer-action > span { padding-top: 8px; }
+}
+.training-roof-feedback { margin: 22px 0 28px; padding: 18px; border: 1px solid var(--review-line); border-radius: 8px; background: var(--review-surface); }
+.training-roof-feedback h3 { margin: 0 0 8px; font-size: 14px; font-weight: 600; }
+.training-roof-feedback .training-explainer { margin: 8px 0 16px; }
+.training-roof-feedback .training-table tbody :is(th,td) { padding: 10px 16px; }
+.training-roof-feedback summary { margin-top: 12px; cursor: pointer; }
+.training-roof-feedback li { padding: 10px 0; overflow-wrap: anywhere; }
+.training-roof-feedback li p { margin: 4px 0; color: var(--review-muted); }

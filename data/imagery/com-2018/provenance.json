@@ -1,0 +1,14 @@
+{
+ "source": "City of Melbourne 2018 Aerial Imagery (True Ortho)",
+ "url": "https://s3-ap-southeast-2.amazonaws.com/opendata-aerial-imagery/mga55_gda94_10cm_2018_CoM_true_ortho.zip",
+ "catalogue": "https://discover.data.vic.gov.au/dataset/2018-aerial-imagery-true-ortho",
+ "licence": "CC BY 4.0",
+ "capture": "May 2018",
+ "gsd_stated": "7.5 cm (filename says 10 cm)",
+ "projection": "MGA Zone 55 GDA94",
+ "accuracy": "25 cm absolute",
+ "gsd_measured": "0.100 m (ERS header and GeoJP2 box, EPSG:28355); the catalogue 7.5 cm figure does not describe this file",
+ "zip_sha256": "e5c07fd8cd40e30eb90644d5f04f7ec03a3c4e6194339cb2511c3c7ca061e109",
+ "zip_removed": "2026-09-28 after extraction; hash kept",
+ "attribution": "Contains City of Melbourne 2018 Aerial Imagery (True Ortho), (c) City of Melbourne, licensed under CC BY 4.0"
+}

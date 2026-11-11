@@ -1,13 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   Search,
   MapPin,
   Building2,
-  Navigation,
-  Compass,
-  Zap,
   Globe,
   Phone,
   Layers,
@@ -16,15 +14,17 @@ import {
   ExternalLink,
   Copy,
   Check,
-  ChevronRight,
   ShieldCheck,
   Sun,
   Moon,
-  Sparkles,
   Box,
+  X,
 } from "lucide-react";
-import { ReverseGeocodeResult, SearchResultItem, DbStats } from "@/lib/geo-engine";
+import { Address, ReverseGeocodeResult, SearchResultItem, DbStats } from "@/lib/geo-engine";
 import { geoClient } from "@/lib/connect-client";
+import HouseReviewLink from "@/components/scenes/HouseReviewLink";
+import type { AddressEnrichment } from "@/lib/address-enrichment";
+import { WorkbenchNav } from "@/components/shell/WorkbenchNav";
 
 interface SidebarProps {
   selectedLocation: { lat: number; lon: number } | null;
@@ -38,7 +38,40 @@ interface SidebarProps {
   isDarkMode?: boolean;
   onToggleTheme?: () => void;
   onOpenDeep3D?: () => void;
+  onOpenCrm?: (address: Address) => void;
+  /** Lookup served by the in-browser fallback (Go service unreachable). */
+  usingFallbackGeo?: boolean;
 }
+
+/** Search radius used by both the Connect and fallback reverse lookups (page.tsx). */
+const REVERSE_RADIUS_M = 300;
+
+/** Match labels. "POI + G-NAF Address" and "G-NAF Rooftop Address" are pinned by
+ *  scripts/live-check.mjs, fallback-check.mjs and poi-join-check.mjs; keep them verbatim. */
+const MATCH_LABELS: Record<string, string> = {
+  poi_and_address: "POI + G-NAF Address",
+  poi_only: "POI match",
+  address_only: "G-NAF Rooftop Address",
+};
+
+/** Metres for the provenance line: one decimal under 10 m, whole metres above. */
+export function formatMetres(metres: number): string {
+  return `${metres < 10 ? metres.toFixed(1) : Math.round(metres)} m`;
+}
+
+/** A distance is only printed when the payload carries a finite number (never "NaN m"). */
+const hasMetres = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
+
+/** Index counts for the footer: a placeholder until the stat exists, never a crash on a partial payload. */
+export function formatCount(value: number | null | undefined): string {
+  return typeof value === "number" && Number.isFinite(value) ? value.toLocaleString() : "…";
+}
+
+/** Plain-words lines for the Property structures section, built by src/lib/address-enrichment.ts. */
+type EnrichmentCopy = { summary: string | null; roof: string | null; structures: { line: string; url: string | null; key: string }[]; solar: string | null; lot: string[]; allocation: string | null; reason: string; roofUrl: string | null };
+
+/** Dark-tone nav tokens for the sidebar's dark map mode (shell.css only scopes the light tone). */
+const DARK_NAV_TOKENS = { "--review-text": "#edf3f8", "--review-muted": "#a0b1c5", "--review-accent": "#67d7e7" } as React.CSSProperties;
 
 export default function Sidebar({
   selectedLocation,
@@ -52,6 +85,8 @@ export default function Sidebar({
   isDarkMode = false,
   onToggleTheme,
   onOpenDeep3D,
+  onOpenCrm,
+  usingFallbackGeo = false,
 }: SidebarProps) {
   const isDark = isDarkMode;
   // Search state
@@ -68,6 +103,28 @@ export default function Sidebar({
   const [isIngesting, setIsIngesting] = useState(false);
   const [ingestLogs, setIngestLogs] = useState<string[]>([]);
   const [copiedCoords, setCopiedCoords] = useState(false);
+  // Per-address enrichment (agent hints and model estimates, never labels): null until the route answers 200.
+  const [enrichmentState, setEnrichment] = useState<{ addressId: number; copy: EnrichmentCopy } | null>(null);
+  const enrichmentAddressId = reverseResult?.address?.id;
+  const enrichment = enrichmentState && enrichmentState.addressId === enrichmentAddressId ? enrichmentState.copy : null;
+  useEffect(() => {
+    if (typeof enrichmentAddressId !== "number" || !Number.isInteger(enrichmentAddressId)) return;
+    const controller = new AbortController();
+    // The parser and copy helpers load with the data so the sidebar bundle stays as it was.
+    void Promise.all([fetch(`/api/address/enrichment?address=${enrichmentAddressId}`, { signal: controller.signal }), import("@/lib/address-enrichment")])
+      .then(async ([response, lib]) => {
+        if (!response.ok || controller.signal.aborted) return;
+        const doc: AddressEnrichment | null = lib.parseEnrichment(await response.json());
+        if (!doc || controller.signal.aborted) return;
+        setEnrichment({ addressId: enrichmentAddressId, copy: {
+          summary: lib.structureSummary(doc), roof: lib.primaryRoofLine(doc.primary_roof), roofUrl: doc.primary_roof?.review_url ?? null,
+          structures: doc.structures.map((structure, index) => ({ line: lib.structureLine(structure), url: structure.review_url, key: `${structure.scene_id ?? ""}/${structure.object_id ?? index}` })),
+          solar: lib.solarLine(doc.solar), lot: lib.lotLines(doc), allocation: lib.describeAllocation(doc.allocation), reason: doc.allocation?.reason ?? "",
+        } });
+      })
+      .catch(() => { /* a missing or unreadable document renders nothing */ });
+    return () => controller.abort();
+  }, [enrichmentAddressId]);
 
   // Fetch DB stats via Connect-ES
   const fetchStats = async () => {
@@ -205,74 +262,77 @@ export default function Sidebar({
 
   const place = reverseResult?.place;
   const address = reverseResult?.address;
+  // Provenance names a match only when the lookup headlined one. "approximate" and "none"
+  // (nothing at the pin) carry no label rather than a vague one beside the empty state.
+  const matchLabel = address || place ? MATCH_LABELS[reverseResult?.match_type ?? ""] : undefined;
+  const addressMetres = address && hasMetres(address.distance_meters) ? formatMetres(address.distance_meters) : null;
+  const provenance = matchLabel ? (addressMetres ? `${matchLabel}, ${addressMetres} from the address point` : matchLabel) : null;
+  const lookupMs = reverseResult?.execution_time_ms;
+  const showLookupMs = typeof lookupMs === "number" && Number.isFinite(lookupMs);
 
+  const iconButton = `inline-flex h-8 w-8 items-center justify-center rounded-md border transition ${
+    isDark
+      ? "bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700"
+      : "bg-white hover:bg-slate-100 text-slate-700 border-slate-300"
+  }`;
+  const quietButton = `inline-flex min-h-9 items-center justify-center gap-2 rounded-md border px-3 text-xs font-medium transition disabled:opacity-50 ${
+    isDark
+      ? "bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-700"
+      : "bg-white hover:bg-slate-50 text-slate-800 border-slate-300"
+  }`;
+  const chip = `px-2 py-1 rounded-md border text-xs whitespace-nowrap transition ${
+    isDark
+      ? "bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border-slate-700"
+      : "bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border-slate-200"
+  }`;
+  const layerToggle = `flex items-center gap-2 rounded-md border px-2 py-2 ${
+    isDark ? "bg-slate-800 border-slate-700 text-slate-200" : "bg-slate-50 border-slate-200 text-slate-700"
+  }`;
+  const muted = isDark ? "text-slate-400" : "text-slate-500";
+
+  // 640px holds the full workspace row (526px nav + two icon buttons) from xl up; below that the row scrolls (globals.css .map-shell-nav).
   return (
-    <div className={`w-full md:w-[460px] h-full flex flex-col z-10 select-none shadow-xl transition-colors duration-200 ${
+    <aside aria-label="Map sidebar" className={`w-full md:w-[460px] xl:w-[640px] h-full flex flex-col z-10 select-none transition-colors duration-200 ${
       isDark
         ? "bg-slate-900 border-r border-slate-800 text-slate-100"
         : "bg-white border-r border-slate-200 text-slate-900"
     }`}>
-      {/* App Header */}
-      <div className={`p-4 border-b transition-colors duration-200 ${
+      {/* App header: one nav row, then the search bar */}
+      <div className={`relative z-20 px-4 pb-4 border-b transition-colors duration-200 ${
         isDark
           ? "border-slate-800 bg-slate-950/60 backdrop-blur"
           : "border-slate-200 bg-white/95 backdrop-blur"
       }`}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-md shadow-blue-500/20">
-              <Compass className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <div className="flex items-center space-x-1.5">
-                <span className={`font-bold text-base tracking-tight ${isDark ? "text-white" : "text-slate-900"}`}>
-                  GeoAU Offline
-                </span>
-                <span className={`text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded border ${
-                  isDark
-                    ? "bg-blue-500/20 text-blue-400 border-blue-500/30"
-                    : "bg-blue-50 text-blue-600 border-blue-200"
-                }`}>
-                  G-NAF + POI
-                </span>
-              </div>
-              <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-                100% Offline Australian Search & Cadastre
-              </p>
-            </div>
+        <div className="flex items-center justify-between gap-3">
+          <div className="map-shell-nav min-w-0 flex-1" style={isDark ? DARK_NAV_TOKENS : undefined}>
+            <WorkbenchNav tone={isDark ? "dark" : "light"} current="map" />
           </div>
-
-          <div className="flex items-center space-x-1.5">
+          <div className="flex flex-none items-center gap-1.5">
             {onToggleTheme && (
               <button
+                type="button"
                 onClick={onToggleTheme}
-                className={`p-1.5 rounded-lg transition flex items-center space-x-1 text-xs border ${
-                  isDark
-                    ? "bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700/60"
-                    : "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200"
-                }`}
-                title="Toggle Google Maps Light / Dark Mode"
+                className={iconButton}
+                aria-label={isDark ? "Switch to light map" : "Switch to dark map"}
+                title={isDark ? "Switch to light map" : "Switch to dark map"}
               >
-                {isDark ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-indigo-500" />}
+                {isDark ? <Sun className="w-4 h-4 text-amber-400" aria-hidden="true" /> : <Moon className="w-4 h-4 text-slate-600" aria-hidden="true" />}
               </button>
             )}
             <button
+              type="button"
               onClick={() => setIsIngestModalOpen(true)}
-              className={`p-1.5 rounded-lg transition flex items-center space-x-1 text-xs border ${
-                isDark
-                  ? "bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border-slate-700/60"
-                  : "bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border-slate-200"
-              }`}
-              title="Manage Offline Database"
+              className={iconButton}
+              aria-label="Manage offline index"
+              title="Manage offline index"
             >
-              <Database className="w-3.5 h-3.5 text-blue-500" />
-              <span>Index</span>
+              <Database className="w-4 h-4 text-blue-600" aria-hidden="true" />
             </button>
           </div>
         </div>
 
         {/* Search Bar */}
-        <div className="relative mt-3">
+        <div className="relative mt-1">
           <div className="relative flex items-center">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
             <input
@@ -291,23 +351,25 @@ export default function Sidebar({
             )}
             {searchQuery && !isSearching && (
               <button
+                type="button"
                 onClick={() => {
                   setSearchQuery("");
                   setShowResultsDropdown(false);
                 }}
-                className={`text-xs absolute right-3 ${isDark ? "text-slate-400 hover:text-slate-200" : "text-slate-400 hover:text-slate-600"}`}
+                aria-label="Clear search"
+                className={`absolute right-2 inline-flex h-6 w-6 items-center justify-center rounded ${isDark ? "text-slate-400 hover:text-slate-200" : "text-slate-400 hover:text-slate-600"}`}
               >
-                ✕
+                <X className="w-3.5 h-3.5" aria-hidden="true" />
               </button>
             )}
           </div>
 
           {/* Autocomplete Results Dropdown */}
           {showResultsDropdown && searchResults.length > 0 && (
-            <div className={`absolute top-full left-0 right-0 mt-1.5 border rounded-xl shadow-2xl max-h-72 overflow-y-auto z-50 divide-y ${
+            <div className={`absolute top-full left-0 right-0 mt-1.5 border rounded-lg max-h-72 overflow-y-auto z-50 divide-y ${
               isDark
-                ? "bg-slate-800 border-slate-700 divide-slate-700/50"
-                : "bg-white border-slate-200 divide-slate-100"
+                ? "bg-slate-800 border-slate-600 divide-slate-700/50"
+                : "bg-white border-slate-300 divide-slate-100"
             }`}>
               {searchResults.map((item, idx) => (
                 <button
@@ -335,15 +397,15 @@ export default function Sidebar({
                       }`}>
                         {item.title}
                       </span>
-                      {item.distance_meters != null && (
-                        <span className={`text-[11px] whitespace-nowrap ml-2 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                      {hasMetres(item.distance_meters) && (
+                        <span className={`text-[11px] tabular-nums whitespace-nowrap ml-2 ${muted}`}>
                           {item.distance_meters > 1000
-                            ? `${(item.distance_meters / 1000).toFixed(1)}km`
-                            : `${item.distance_meters}m`}
+                            ? `${(item.distance_meters / 1000).toFixed(1)} km`
+                            : `${Math.round(item.distance_meters)} m`}
                         </span>
                       )}
                     </div>
-                    <div className={`text-xs truncate ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                    <div className={`text-xs truncate ${muted}`}>
                       {item.subtitle}
                     </div>
                   </div>
@@ -354,38 +416,15 @@ export default function Sidebar({
         </div>
 
         {/* Quick Location Shortcuts */}
-        <div className="flex items-center space-x-1.5 mt-2.5 overflow-x-auto pb-1 text-xs">
-          <span className={`text-[11px] uppercase font-bold tracking-wider mr-1 ${isDark ? "text-slate-500" : "text-slate-400"}`}>
-            Jump:
-          </span>
-          <button
-            onClick={() => onSelectCoordinates(-37.79044, 145.31252)}
-            className={`px-2 py-1 rounded-md border text-[11px] whitespace-nowrap transition ${
-              isDark
-                ? "bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border-slate-700"
-                : "bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border-slate-200"
-            }`}
-          >
+        <div className="flex items-center gap-1.5 mt-2.5 overflow-x-auto pb-1 text-xs">
+          <span className={`text-xs mr-1 ${muted}`}>Go to</span>
+          <button type="button" onClick={() => onSelectCoordinates(-37.79044, 145.31252)} className={chip}>
             27 Cambridge Rd
           </button>
-          <button
-            onClick={() => onSelectCoordinates(-37.81005, 144.9587)}
-            className={`px-2 py-1 rounded-md border text-[11px] whitespace-nowrap transition ${
-              isDark
-                ? "bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border-slate-700"
-                : "bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border-slate-200"
-            }`}
-          >
+          <button type="button" onClick={() => onSelectCoordinates(-37.81005, 144.9587)} className={chip}>
             Melbourne CBD
           </button>
-          <button
-            onClick={() => onSelectCoordinates(-33.8848, 151.1960)}
-            className={`px-2 py-1 rounded-md border text-[11px] whitespace-nowrap transition ${
-              isDark
-                ? "bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border-slate-700"
-                : "bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border-slate-200"
-            }`}
-          >
+          <button type="button" onClick={() => onSelectCoordinates(-33.8848, 151.1960)} className={chip}>
             Sydney Broadway
           </button>
         </div>
@@ -395,259 +434,228 @@ export default function Sidebar({
       <div className={`flex-1 overflow-y-auto p-4 space-y-4 ${
         isDark ? "bg-slate-900" : "bg-[#f8f9fa]"
       }`}>
-        {/* Active Pin Card */}
+        {/* Selected address card: the address is the page's only h1 */}
         {selectedLocation && (
-          <div className={`border rounded-2xl p-4 shadow-sm relative overflow-hidden backdrop-blur ${
+          <section aria-label="Selected address" aria-busy={isLoadingReverse} className={`border rounded-lg p-4 relative overflow-hidden ${
             isDark
               ? "bg-slate-800/70 border-slate-700/80 text-white"
-              : "bg-white border-slate-200 text-slate-900 shadow-slate-200/50"
+              : "bg-white border-slate-200 text-slate-900"
           }`}>
-            {/* Top Badge: Execution Time & Match Type */}
-            <div className="flex items-center justify-between mb-2.5">
-              <div className="flex items-center space-x-1.5">
-                <span
-                  className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
-                    reverseResult?.match_type === "poi_and_address"
-                      ? "bg-amber-500/20 text-amber-500 border-amber-500/30"
-                      : reverseResult?.match_type === "poi_only"
-                      ? "bg-purple-500/20 text-purple-500 border-purple-500/30"
-                      : reverseResult?.match_type === "address_only"
-                      ? "bg-emerald-500/20 text-emerald-600 border-emerald-500/30"
-                      : isDark ? "bg-slate-700 text-slate-300 border-slate-600" : "bg-slate-100 text-slate-700 border-slate-200"
-                  }`}
-                >
-                  {reverseResult?.match_type === "poi_and_address"
-                    ? "POI + G-NAF Address"
-                    : reverseResult?.match_type === "poi_only"
-                    ? "POI Match"
-                    : reverseResult?.match_type === "address_only"
-                    ? "G-NAF Rooftop Address"
-                    : "Nearest Map Point"}
-                </span>
-              </div>
+            {!reverseResult && isLoadingReverse ? (
+              <p role="status" className={`text-xs ${muted}`}>Reading the nearest G-NAF address point…</p>
+            ) : (
+              <>
+                {address ? (
+                  <>
+                    <h1 className={`text-[20px] font-semibold leading-snug ${isDark ? "text-white" : "text-slate-900"}`}>
+                      {address.full_address}
+                    </h1>
+                    <p className={`mt-0.5 text-xs ${muted}`}>
+                      {[address.suburb, address.state, address.postcode].filter(Boolean).join(" ")}
+                    </p>
+                  </>
+                ) : (
+                  <p className={`text-xs ${muted}`}>No G-NAF address point within {REVERSE_RADIUS_M} m of the pin.</p>
+                )}
 
-              {reverseResult?.execution_time_ms != null && (
-                <div className={`flex items-center space-x-1 text-[11px] font-mono px-2 py-0.5 rounded border ${
-                  isDark
-                    ? "text-emerald-400 bg-emerald-950/40 border-emerald-800/40"
-                    : "text-emerald-700 bg-emerald-50 border-emerald-200"
-                }`}>
-                  <Zap className="w-3 h-3 text-emerald-500" />
-                  <span>{reverseResult.execution_time_ms} ms</span>
-                </div>
-              )}
-            </div>
+                {/* Provenance line: match source, metres to the address point, lookup time */}
+                {(provenance || usingFallbackGeo || showLookupMs) && (
+                <p className={`mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs ${muted}`}>
+                  {provenance && (
+                    <>
+                      <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-emerald-600" aria-hidden="true" />
+                      <span>{provenance}</span>
+                    </>
+                  )}
+                  {usingFallbackGeo && (
+                    <span
+                      title="Go service unreachable. Served by the in-browser fallback; restart it with: task start:server"
+                      className="rounded border border-orange-300 bg-orange-50 px-1.5 text-[11px] font-medium text-orange-700"
+                    >
+                      Fallback data
+                    </span>
+                  )}
+                  {showLookupMs && (
+                    <span className="ml-auto tabular-nums text-[11px]">{lookupMs} ms lookup</span>
+                  )}
+                </p>
+                )}
+              </>
+            )}
 
-            {/* POI Info (if present) */}
+            {/* Matched place (if the pin sits on a business) */}
             {place ? (
-              <div className={`mb-3.5 pb-3.5 border-b ${isDark ? "border-slate-700/60" : "border-slate-100"}`}>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h2 className={`text-lg font-bold leading-snug ${isDark ? "text-white" : "text-slate-900"}`}>
-                      {place.name}
-                    </h2>
+              <div className={`mt-3 pt-3 border-t ${isDark ? "border-slate-700/60" : "border-slate-200"}`}>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <h2 className={`text-sm font-semibold leading-snug ${isDark ? "text-white" : "text-slate-900"}`}>{place.name}</h2>
                     {place.category && (
-                      <span className="inline-block mt-1 text-[11px] font-medium bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md border border-blue-200">
+                      <span className={`inline-block mt-1 text-[11px] px-2 py-0.5 rounded border ${
+                        isDark ? "bg-slate-700/50 text-slate-300 border-slate-600" : "bg-blue-50 text-blue-700 border-blue-200"
+                      }`}>
                         {place.category.replace(/_/g, " ")}
                       </span>
                     )}
                   </div>
-                  {place.distance_meters != null && (
-                    <div className="text-right ml-2">
-                      <div className={`text-xs font-semibold px-2 py-1 rounded-md border whitespace-nowrap ${
-                        isDark
-                          ? "text-amber-400 bg-amber-950/40 border-amber-800/40"
-                          : "text-amber-700 bg-amber-50 border-amber-200"
-                      }`}>
-                        🎯 {place.distance_meters}m from pin
-                      </div>
-                    </div>
+                  {hasMetres(place.distance_meters) && (
+                    <span className={`text-xs tabular-nums whitespace-nowrap ${muted}`}>
+                      {formatMetres(place.distance_meters)} from the pin
+                    </span>
                   )}
                 </div>
 
                 {place.address_text && (
-                  <p className={`text-xs mt-2 flex items-center space-x-1.5 ${isDark ? "text-slate-300" : "text-slate-600"}`}>
-                    <MapPin className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                  <p className={`text-xs mt-2 flex items-center gap-1.5 ${isDark ? "text-slate-300" : "text-slate-600"}`}>
+                    <Building2 className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" aria-hidden="true" />
                     <span>{place.address_text}</span>
                   </p>
                 )}
 
-                {/* Additional POI Details */}
-                <div className={`flex flex-wrap gap-2 mt-2.5 pt-2 border-t ${isDark ? "border-slate-700/40" : "border-slate-100"}`}>
-                  {place.brand && (
-                    <span className={`text-[11px] px-2 py-0.5 rounded ${
-                      isDark ? "text-slate-400 bg-slate-700/50" : "text-slate-600 bg-slate-100"
-                    }`}>
-                      Brand: <b className={isDark ? "text-slate-200" : "text-slate-800"}>{place.brand}</b>
-                    </span>
-                  )}
-                  {place.phone && (
-                    <a
-                      href={`tel:${place.phone}`}
-                      className={`text-[11px] hover:underline flex items-center space-x-1 px-2 py-0.5 rounded ${
-                        isDark ? "text-blue-400 bg-slate-700/50" : "text-blue-600 bg-slate-100"
-                      }`}
-                    >
-                      <Phone className="w-3 h-3" />
-                      <span>{place.phone}</span>
-                    </a>
-                  )}
-                  {place.website && (
-                    <a
-                      href={place.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`text-[11px] hover:underline flex items-center space-x-1 px-2 py-0.5 rounded ${
-                        isDark ? "text-blue-400 bg-slate-700/50" : "text-blue-600 bg-slate-100"
-                      }`}
-                    >
-                      <Globe className="w-3 h-3" />
-                      <span>Website</span>
-                      <ExternalLink className="w-2.5 h-2.5" />
-                    </a>
-                  )}
-                </div>
+                {(place.brand || place.phone || place.website) && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {place.brand && (
+                      <span className={`text-[11px] px-2 py-0.5 rounded ${
+                        isDark ? "text-slate-400 bg-slate-700/50" : "text-slate-600 bg-slate-100"
+                      }`}>
+                        Brand: <b className={isDark ? "text-slate-200" : "text-slate-800"}>{place.brand}</b>
+                      </span>
+                    )}
+                    {place.phone && (
+                      <a
+                        href={`tel:${place.phone}`}
+                        className={`text-[11px] hover:underline flex items-center gap-1 px-2 py-0.5 rounded ${
+                          isDark ? "text-blue-400 bg-slate-700/50" : "text-blue-700 bg-slate-100"
+                        }`}
+                      >
+                        <Phone className="w-3 h-3" aria-hidden="true" />
+                        <span>{place.phone}</span>
+                      </a>
+                    )}
+                    {place.website && (
+                      <a
+                        href={place.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`text-[11px] hover:underline flex items-center gap-1 px-2 py-0.5 rounded ${
+                          isDark ? "text-blue-400 bg-slate-700/50" : "text-blue-700 bg-slate-100"
+                        }`}
+                      >
+                        <Globe className="w-3 h-3" aria-hidden="true" />
+                        <span>Website</span>
+                        <ExternalLink className="w-2.5 h-2.5" aria-hidden="true" />
+                      </a>
+                    )}
+                  </div>
+                )}
               </div>
             ) : null}
 
-            {/* Cadastral G-NAF Address Info */}
-            <div>
-              <div className={`flex items-center space-x-1.5 mb-1 text-xs font-semibold uppercase tracking-wider ${
-                isDark ? "text-slate-400" : "text-slate-500"
-              }`}>
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-                <span>Authoritative Cadastral Address</span>
-              </div>
+            {/* Property structures: what the enrichment pipeline read for this address; nothing renders without a document */}
+            {address && enrichment && (
+              <section aria-label="Property structures" className={`mt-3 pt-3 border-t text-xs ${isDark ? "border-slate-700/60" : "border-slate-200"}`}>
+                <h2 className={`text-sm font-semibold leading-snug ${isDark ? "text-white" : "text-slate-900"}`}>Property structures</h2>
+                {enrichment.summary && <p className={`mt-0.5 tabular-nums ${muted}`}>{enrichment.summary}</p>}
+                <ul className="mt-1.5 space-y-1 tabular-nums">
+                  {enrichment.roof && <li className="flex flex-wrap justify-between gap-x-3"><span>{enrichment.roof}</span>{enrichment.roofUrl && <Link href={enrichment.roofUrl} className={`underline underline-offset-2 ${muted}`}>Open</Link>}</li>}
+                  {enrichment.structures.map(structure => <li key={structure.key} className="flex flex-wrap justify-between gap-x-3"><span>{structure.line}</span>{structure.url && <Link href={structure.url} className={`underline underline-offset-2 ${muted}`}>Open</Link>}</li>)}
+                  {enrichment.solar && <li>{enrichment.solar}</li>}
+                  {enrichment.lot.map(line => <li key={line}>{line}</li>)}
+                </ul>
+                {enrichment.allocation && <p className={`mt-1.5 leading-relaxed ${muted}`} title={enrichment.reason || undefined}>{enrichment.allocation}</p>}
+                <p className={`mt-1 text-[11px] ${muted}`}>Agent hints, not labels; bands and areas are model estimates.</p>
+              </section>
+            )}
 
-              {address ? (
-                <div>
-                  <div className={`text-sm font-semibold leading-snug ${isDark ? "text-slate-100" : "text-slate-900"}`}>
-                    {address.full_address}
-                  </div>
-                  <div className={`flex items-center justify-between mt-1 text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-                    <span>
-                      {[address.suburb, address.state, address.postcode].filter(Boolean).join(" ")}
-                    </span>
-                    {address.distance_meters != null && (
-                      <span className="text-emerald-600 text-[11px] font-medium">
-                        📍 {address.distance_meters}m to rooftop
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="text-xs text-slate-400 italic">
-                  No registered G-NAF rooftop within search radius.
-                </div>
-              )}
+            {/* Primary action: the house review link owns analysis and training enrolment */}
+            {address && !isLoadingReverse && <HouseReviewLink key={address.id} addressId={address.id} dark={isDark}/>}
 
-              {/* Deep 3D Satellite Model Inspector Trigger */}
-              <div className="mt-3">
-                <button
-                  onClick={() => onOpenDeep3D?.()}
-                  className={`w-full p-2.5 rounded-xl border flex items-center justify-between text-xs transition font-semibold shadow-sm ${
-                    isDark
-                      ? "bg-gradient-to-r from-blue-900/30 via-indigo-900/30 to-purple-900/30 hover:from-blue-900/50 hover:to-purple-900/50 border-blue-500/40 text-blue-300"
-                      : "bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 border-blue-200 text-blue-700"
-                  }`}
-                  title="Launch Monocular Deep 3D Elevation Studio"
-                >
-                  <div className="flex items-center space-x-2">
-                    <Sparkles className="w-4 h-4 text-purple-500 animate-pulse" />
-                    <span>Inspect in Deep 3D Studio</span>
-                  </div>
-                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-500">
-                    3D RELIEF
-                  </span>
-                </button>
-              </div>
+            {/* Quiet pair: CRM editor and the Deep 3D Studio */}
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => address && onOpenCrm?.(address)}
+                disabled={!address}
+                className={quietButton}
+                title="Edit CRM metadata, boundaries and POIs for this address"
+              >
+                <ShieldCheck className="w-4 h-4 text-emerald-600" aria-hidden="true" />
+                <span>Address CRM</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onOpenDeep3D?.()}
+                className={quietButton}
+                title="Open the monocular Deep 3D Studio for this site"
+              >
+                <Box className="w-4 h-4 text-blue-600" aria-hidden="true" />
+                <span>Inspect in Deep 3D Studio</span>
+              </button>
             </div>
 
-            {/* Lat / Lon bar */}
-            <div className={`mt-3.5 pt-3 border-t flex items-center justify-between text-xs font-mono p-2 rounded-lg ${
+            {/* Coordinates */}
+            <div className={`mt-3.5 pt-3 border-t flex items-center justify-between text-xs font-mono p-2 rounded-md ${
               isDark
                 ? "border-slate-700/60 text-slate-400 bg-slate-900/60"
-                : "border-slate-100 text-slate-600 bg-slate-50"
+                : "border-slate-200 text-slate-600 bg-slate-50"
             }`}>
               <span>
                 {selectedLocation.lat.toFixed(6)}, {selectedLocation.lon.toFixed(6)}
               </span>
               <button
+                type="button"
                 onClick={handleCopyCoords}
-                className="flex items-center space-x-1 text-blue-500 hover:text-blue-600 transition"
+                className="flex items-center gap-1 text-blue-600 hover:text-blue-700 transition"
               >
-                {copiedCoords ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                {copiedCoords ? <Check className="w-3.5 h-3.5 text-emerald-500" aria-hidden="true" /> : <Copy className="w-3.5 h-3.5" aria-hidden="true" />}
                 <span className="text-[11px]">{copiedCoords ? "Copied" : "Copy"}</span>
               </button>
             </div>
-          </div>
+          </section>
         )}
 
-        {/* Map Layers Toggle */}
-        <div className={`border rounded-xl p-3 shadow-sm ${
+        {/* Map layers */}
+        <section className={`border rounded-lg p-3 ${
           isDark
             ? "bg-slate-800/50 border-slate-700/60"
             : "bg-white border-slate-200"
         }`}>
-          <div className={`flex items-center space-x-2 text-xs font-semibold uppercase tracking-wider mb-2.5 ${
-            isDark ? "text-slate-300" : "text-slate-600"
+          <h2 className={`flex items-center gap-2 text-sm font-semibold ${
+            isDark ? "text-slate-100" : "text-slate-800"
           }`}>
-            <Layers className="w-3.5 h-3.5 text-blue-500" />
-            <span>Map Layers</span>
+            <Layers className="w-3.5 h-3.5 text-blue-600" aria-hidden="true" />
+            Map layers
+          </h2>
+          <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+            <label className={layerToggle}>
+              <input type="checkbox" checked={showPois} onChange={(e) => setShowPois(e.target.checked)} />
+              <span className="w-2.5 h-2.5 rounded-sm bg-amber-500 rotate-45" aria-hidden="true" />
+              Places
+            </label>
+            <label className={layerToggle}>
+              <input type="checkbox" checked={showAddresses} onChange={(e) => setShowAddresses(e.target.checked)} />
+              <span className="w-2 h-2 rounded-full bg-emerald-500" aria-hidden="true" />
+              Address points
+            </label>
           </div>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <button
-              onClick={() => setShowPois(!showPois)}
-              className={`p-2 rounded-lg border flex items-center justify-between transition ${
-                showPois
-                  ? "bg-amber-500/10 border-amber-500/40 text-amber-600"
-                  : isDark ? "bg-slate-800 border-slate-700 text-slate-400" : "bg-slate-50 border-slate-200 text-slate-400"
-              }`}
-            >
-              <div className="flex items-center space-x-2">
-                <div className="w-2.5 h-2.5 rounded-sm bg-amber-500 rotate-45" />
-                <span>POIs & Places</span>
-              </div>
-              <span className="text-[10px] font-mono">{showPois ? "ON" : "OFF"}</span>
-            </button>
+        </section>
 
-            <button
-              onClick={() => setShowAddresses(!showAddresses)}
-              className={`p-2 rounded-lg border flex items-center justify-between transition ${
-                showAddresses
-                  ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-600"
-                  : isDark ? "bg-slate-800 border-slate-700 text-slate-400" : "bg-slate-50 border-slate-200 text-slate-400"
-              }`}
-            >
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span>G-NAF Points</span>
-              </div>
-              <span className="text-[10px] font-mono">{showAddresses ? "ON" : "OFF"}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Nearby Places Section */}
+        {/* Nearby places */}
         {reverseResult?.nearby_places && reverseResult.nearby_places.length > 0 && (
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className={`text-xs font-bold uppercase tracking-wider ${
-                isDark ? "text-slate-300" : "text-slate-600"
-              }`}>
-                Nearby Places ({reverseResult.nearby_places.length})
-              </span>
-            </div>
+          <section>
+            <h2 className={`mb-2 text-sm font-semibold ${
+              isDark ? "text-slate-100" : "text-slate-800"
+            }`}>Nearby places ({reverseResult.nearby_places.length})</h2>
 
             <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
               {reverseResult.nearby_places.map((p) => (
                 <button
                   key={p.id}
+                  type="button"
                   onClick={() => onSelectCoordinates(p.lat, p.lon)}
-                  className={`w-full text-left p-2 rounded-xl border transition flex items-center justify-between group ${
+                  className={`w-full text-left p-2 rounded-md border transition flex items-center justify-between group ${
                     isDark
                       ? "bg-slate-800/40 hover:bg-slate-800 border-slate-700/50 hover:border-slate-600"
-                      : "bg-white hover:bg-slate-50 border-slate-200/90 hover:border-blue-300 shadow-sm"
+                      : "bg-white hover:bg-slate-50 border-slate-200 hover:border-blue-300"
                   }`}
                 >
                   <div className="min-w-0 flex-1 pr-2">
@@ -656,62 +664,63 @@ export default function Sidebar({
                     }`}>
                       {p.name}
                     </div>
-                    <div className={`text-[11px] truncate ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                    <div className={`text-[11px] truncate ${muted}`}>
                       {p.category?.replace(/_/g, " ") || p.address_text || "Place"}
                     </div>
                   </div>
-                  {p.distance_meters != null && (
-                    <span className={`text-[11px] px-1.5 py-0.5 rounded whitespace-nowrap ${
+                  {hasMetres(p.distance_meters) && (
+                    <span className={`text-[11px] tabular-nums px-1.5 py-0.5 rounded whitespace-nowrap ${
                       isDark ? "text-slate-400 bg-slate-700/50" : "text-slate-600 bg-slate-100"
                     }`}>
-                      {p.distance_meters}m
+                      {Math.round(p.distance_meters)} m
                     </span>
                   )}
                 </button>
               ))}
             </div>
-          </div>
+          </section>
         )}
       </div>
 
-      {/* Footer: Database Status */}
-      <div className={`p-3 border-t text-xs flex items-center justify-between ${
+      {/* Footer: index status */}
+      <div className={`p-3 border-t text-xs flex items-center justify-between gap-2 ${
         isDark
           ? "border-slate-800 bg-slate-950/80 text-slate-400"
           : "border-slate-200 bg-white text-slate-500"
       }`}>
-        <div className="flex items-center space-x-2">
-          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span>
-            <b>{stats?.placeCount.toLocaleString() ?? "..."}</b> POIs •{" "}
-            <b>{stats?.addressCount.toLocaleString() ?? "..."}</b> Addrs
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="w-2 h-2 flex-none rounded-full bg-emerald-500" aria-hidden="true" />
+          <span className="tabular-nums truncate">
+            {formatCount(stats?.placeCount)} places, {formatCount(stats?.addressCount)} addresses indexed
           </span>
         </div>
-        <span className={`font-mono text-[11px] ${isDark ? "text-slate-500" : "text-slate-400"}`}>
-          SQLite: {stats?.dbSizeFormatted ?? "1.5 MB"}
+        <span className={`tabular-nums text-[11px] whitespace-nowrap ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+          SQLite {stats?.dbSizeFormatted ?? "…"}
         </span>
       </div>
 
       {/* Ingestion Modal */}
       {isIngestModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className={`border rounded-2xl w-full max-w-lg p-5 shadow-2xl space-y-4 ${
+          <div role="dialog" aria-labelledby="offline-index-title" className={`border rounded-lg w-full max-w-lg p-5 space-y-4 ${
             isDark
               ? "bg-slate-900 border-slate-700 text-slate-100"
-              : "bg-white border-slate-200 text-slate-900"
+              : "bg-white border-slate-300 text-slate-900"
           }`}>
             <div className={`flex items-center justify-between border-b pb-3 ${
-              isDark ? "border-slate-800" : "border-slate-100"
+              isDark ? "border-slate-800" : "border-slate-200"
             }`}>
-              <div className="flex items-center space-x-2">
-                <Database className="w-5 h-5 text-blue-500" />
-                <h3 className="text-base font-bold">Manage Offline Australian Index</h3>
+              <div className="flex items-center gap-2">
+                <Database className="w-5 h-5 text-blue-600" aria-hidden="true" />
+                <h3 id="offline-index-title" className="text-sm font-semibold">Manage the offline Australian index</h3>
               </div>
               <button
+                type="button"
                 onClick={() => setIsIngestModalOpen(false)}
-                className={`text-sm ${isDark ? "text-slate-400 hover:text-white" : "text-slate-400 hover:text-slate-800"}`}
+                aria-label="Close"
+                className={`inline-flex h-7 w-7 items-center justify-center rounded ${isDark ? "text-slate-400 hover:text-white" : "text-slate-400 hover:text-slate-800"}`}
               >
-                ✕
+                <X className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
 
@@ -722,13 +731,13 @@ export default function Sidebar({
 
               <div>
                 <label className={`block font-semibold mb-1 ${isDark ? "text-slate-400" : "text-slate-700"}`}>
-                  Select Region Preset:
+                  Region preset
                 </label>
                 <select
                   value={ingestPreset}
                   onChange={(e) => setIngestPreset(e.target.value)}
                   disabled={isIngesting}
-                  className={`w-full border rounded-lg p-2 focus:outline-none focus:border-blue-500 ${
+                  className={`w-full border rounded-md p-2 focus:outline-none focus:border-blue-500 ${
                     isDark ? "bg-slate-800 border-slate-700 text-slate-200" : "bg-slate-50 border-slate-200 text-slate-900"
                   }`}
                 >
@@ -742,13 +751,13 @@ export default function Sidebar({
 
               <div>
                 <label className={`block font-semibold mb-1 ${isDark ? "text-slate-400" : "text-slate-700"}`}>
-                  Record Limit (per type):
+                  Record limit (per type)
                 </label>
                 <select
                   value={ingestLimit}
                   onChange={(e) => setIngestLimit(parseInt(e.target.value, 10))}
                   disabled={isIngesting}
-                  className={`w-full border rounded-lg p-2 focus:outline-none focus:border-blue-500 ${
+                  className={`w-full border rounded-md p-2 focus:outline-none focus:border-blue-500 ${
                     isDark ? "bg-slate-800 border-slate-700 text-slate-200" : "bg-slate-50 border-slate-200 text-slate-900"
                   }`}
                 >
@@ -760,7 +769,7 @@ export default function Sidebar({
 
               {/* Ingestion Logs Console */}
               {ingestLogs.length > 0 && (
-                <div className={`rounded-lg p-3 font-mono text-[11px] border max-h-40 overflow-y-auto space-y-1 ${
+                <div className={`rounded-md p-3 font-mono text-[11px] border max-h-40 overflow-y-auto space-y-1 ${
                   isDark
                     ? "bg-slate-950 border-slate-800 text-slate-300"
                     : "bg-slate-50 border-slate-200 text-slate-700"
@@ -774,30 +783,32 @@ export default function Sidebar({
               )}
             </div>
 
-            <div className={`flex items-center justify-end space-x-2 pt-2 border-t ${
-              isDark ? "border-slate-800" : "border-slate-100"
+            <div className={`flex items-center justify-end gap-2 pt-2 border-t ${
+              isDark ? "border-slate-800" : "border-slate-200"
             }`}>
               <button
+                type="button"
                 onClick={() => setIsIngestModalOpen(false)}
                 disabled={isIngesting}
-                className={`px-3 py-1.5 rounded-lg text-xs transition ${
-                  isDark ? "bg-slate-800 hover:bg-slate-700 text-slate-300" : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                className={`px-3 py-1.5 rounded-md border text-xs transition ${
+                  isDark ? "bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700" : "bg-white hover:bg-slate-100 text-slate-700 border-slate-300"
                 }`}
               >
                 Close
               </button>
               <button
+                type="button"
                 onClick={handleStartIngest}
                 disabled={isIngesting}
-                className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white text-xs font-semibold flex items-center space-x-1.5 transition shadow-md shadow-blue-600/20"
+                className="px-4 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white text-xs font-semibold flex items-center gap-1.5 transition"
               >
-                {isIngesting && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-                <span>{isIngesting ? "Indexing Region..." : "Start Ingestion"}</span>
+                {isIngesting && <RefreshCw className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />}
+                <span>{isIngesting ? "Indexing region…" : "Start ingestion"}</span>
               </button>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </aside>
   );
 }
