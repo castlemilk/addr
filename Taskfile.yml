@@ -1,5 +1,8 @@
 version: '3'
 
+includes:
+  rooftam: ./Taskfile.rooftam.yml
+
 dotenv: ['.env.local', '.env']
 
 vars:
