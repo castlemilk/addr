@@ -1,0 +1,71 @@
+name: RoofTAM bench contracts
+on:
+  pull_request:
+    paths:
+      - 'experiments/rooftam/**'
+      - '.github/workflows/rooftam-bench.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: rooftam-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  cpu-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: experiments/rooftam/requirements.txt
+      - name: Install CPU-only test dependencies
+        run: |
+          python -m pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install numpy==2.2.6 Pillow==11.3.0 scipy==1.15.3 pytest==8.4.2 nbformat==5.10.4
+      - name: Unit and synthetic end-to-end tests (not TPU evidence)
+        run: |
+          python -m pytest -q experiments/rooftam/tests --junitxml=rooftam-tests.xml
+          python -m compileall -q experiments/rooftam
+          bash -n experiments/rooftam/kaggle/bootstrap.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rooftam-cpu-contracts
+          path: rooftam-tests.xml
+  edgetam-cpu-smoke:
+    needs: cpu-contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      ROOFTAM_WORK: ${{ runner.temp }}/rooftam-runtime
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned upstream EdgeTAM (CPU, no CUDA extension)
+        run: bash experiments/rooftam/kaggle/bootstrap.sh cpu
+      - name: Actual pretrained forward, backward and validation on synthetic shapes
+        run: |
+          PY="$ROOFTAM_WORK/venv/bin/python"
+          CKPT="$(cat "$ROOFTAM_WORK/checkpoint-path.txt")"
+          "$PY" -m experiments.rooftam.bench fixture --output "$RUNNER_TEMP/roof-fixture"
+          "$PY" -m experiments.rooftam.bench train --model edgetam --device cpu \
+            --checkpoint "$CKPT" --manifest "$RUNNER_TEMP/roof-fixture/manifest.jsonl" \
+            --allow-synthetic --steps 1 --output "$RUNNER_TEMP/edge-train"
+          "$PY" -m experiments.rooftam.bench evaluate --model edgetam --device cpu \
+            --checkpoint "$CKPT" --manifest "$RUNNER_TEMP/roof-fixture/manifest.jsonl" \
+            --allow-synthetic --adapter "$RUNNER_TEMP/edge-train/adapter.pt" \
+            --output "$RUNNER_TEMP/edge-eval"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: edgetam-cpu-compatibility-not-tpu
+          path: |
+            ${{ runner.temp }}/edge-train/*.json
+            ${{ runner.temp }}/edge-train/*.jsonl
+            ${{ runner.temp }}/edge-eval/*.json
+            ${{ runner.temp }}/rooftam-runtime/resolved-requirements.txt
