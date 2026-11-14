@@ -1,0 +1,11 @@
+__pycache__/
+.pytest_cache/
+*.pyc
+runs/
+work/
+*.pt
+*.pth
+*.onnx
+*.zip
+.ipynb_checkpoints/
+kaggle/kernel-metadata.json
