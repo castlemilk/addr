@@ -567,7 +567,7 @@ func TestSetupAndAuthUseOfficialClientWithoutSerializingCredentials(t *testing.T
 	if err := a.run(context.Background(), []string{"setup", "--python", "python3"}); err != nil {
 		t.Fatal(err)
 	}
-	if len(commands) != 2 || !strings.Contains(commands[1], "kaggle=="+kaggleVersion) {
+	if len(commands) != 5 || !strings.Contains(commands[1], "kaggle=="+kaggleVersion) || !strings.Contains(commands[1], "six==1.17.0") {
 		t.Fatal(commands)
 	}
 	executable, err := os.Executable()
@@ -577,7 +577,7 @@ func TestSetupAndAuthUseOfficialClientWithoutSerializingCredentials(t *testing.T
 	if err = a.run(context.Background(), []string{"auth", "--no-launch-browser", "--kaggle", executable}); err != nil {
 		t.Fatal(err)
 	}
-	if interactiveCalls != 1 || commands[2] != "auth login --no-launch-browser" {
+	if interactiveCalls != 1 || commands[5] != "auth login --no-launch-browser" {
 		t.Fatal(commands)
 	}
 	for _, command := range commands {
