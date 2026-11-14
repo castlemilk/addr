@@ -50,3 +50,17 @@ jobs:
         with:
           name: rooftam-cli-coverage
           path: tools/rooftam/coverage.out
+  macos-task-contracts:
+    name: macOS Task contracts
+    runs-on: macos-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: go-task/setup-task@v1
+        with:
+          version: '3.52.0'
+      - name: Check native and symlinked Task paths (fake CLI, no Kaggle compute)
+        run: task rooftam:test:tasks

@@ -143,7 +143,13 @@ class TaskfileTests(unittest.TestCase):
             self.assert_ok(self.invoke("doctor", entry=entry))
             self.assertEqual(self.calls()[-1]["dotenv"], "local-value")
 
-    def test_every_cli_action_routes_from_all_root_entrypoints(self):
+    def assert_module_cwd(self, cwd):
+        # getcwd() may resolve symlinks that TemporaryDirectory retains.
+        # Check filesystem identity, not spelling; a different directory fails.
+        self.assertTrue(Path(cwd).samefile(self.module),
+                        f"Working directory {cwd!r} is not the module directory {str(self.module)!r}")
+
+    def check_actions(self):
         for entry in ("root", "file", "nested"):
             for action in ACTIONS:
                 with self.subTest(entry=entry, action=action):
@@ -153,8 +159,32 @@ class TaskfileTests(unittest.TestCase):
                     calls = self.calls()
                     self.assertEqual([c["command"] for c in calls], ["go", "rooftam"])
                     self.assertEqual(calls[-1]["args"], [action, *args])
-                    self.assertEqual(calls[-1]["cwd"], str(self.module))
+                    for call in calls:
+                        self.assert_module_cwd(call["cwd"])
                     self.assertEqual(calls[0]["gowork"], "off")
+
+    def test_every_cli_action_routes_from_all_root_entrypoints(self):
+        self.check_actions()
+
+    def test_every_cli_action_routes_through_symlinked_root(self):
+        # Reproduce aliased temporary directories (macOS /var vs /private/var)
+        # on any POSIX runner. Keep the alias unresolved in the expected path.
+        alias = self.root / "repository alias"
+        alias.symlink_to(self.root.resolve(), target_is_directory=True)
+        self.root = alias
+        self.module = alias / "tools" / "rooftam"
+        self.assertNotEqual(str(self.module), str(self.module.resolve()))
+        self.check_actions()
+
+    def test_working_directory_check_rejects_wrong_directory(self):
+        other = self.root / "wrong working directory"
+        other.mkdir()
+        alias = self.root / "wrong directory alias"
+        alias.symlink_to(other.resolve(), target_is_directory=True)
+        for cwd in (other, alias):
+            with self.subTest(cwd=str(cwd)):
+                with self.assertRaises(AssertionError):
+                    self.assert_module_cwd(str(cwd))
 
     def test_arguments_are_not_reinterpreted_as_shell_commands(self):
         payload = "user$(touch SHOULD_NOT_EXIST); echo nope"
