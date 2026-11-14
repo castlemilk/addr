@@ -1,0 +1,74 @@
+name: RoofTAM Kaggle setup smoke
+on:
+  pull_request:
+    paths:
+      - 'tools/rooftam/**'
+      - '.github/workflows/rooftam-kaggle-setup.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'tools/rooftam/**'
+      - '.github/workflows/rooftam-kaggle-setup.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: rooftam-kaggle-setup-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  install-and-repair:
+    name: ${{ matrix.os }} / Python ${{ matrix.python }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ['3.12', '3.15']
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    env:
+      GOTOOLCHAIN: local
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/rooftam/go.mod
+          cache: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Build the actual controller
+        working-directory: tools/rooftam
+        run: go build -trimpath -o "$RUNNER_TEMP/rooftam" .
+      - name: Clean install, reproduce missing six, then repair (no sign-in or compute)
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE_PYTHON="$(command -v python)"
+          export HOME="$RUNNER_TEMP/rooftam smoke home"
+          export XDG_CONFIG_HOME="$HOME/config with spaces"
+          export KAGGLE_CONFIG_DIR="$HOME/kaggle-credentials"
+          unset KAGGLE_API_TOKEN KAGGLE_KEY KAGGLE_USERNAME ROOFTAM_KAGGLE_BIN
+          mkdir -p "$HOME" "$XDG_CONFIG_HOME" "$KAGGLE_CONFIG_DIR"
+          "$RUNNER_TEMP/rooftam" setup --python "$BASE_PYTHON"
+          if [[ "$RUNNER_OS" == macOS ]]; then
+            VENV="$HOME/Library/Application Support/addr-rooftam/kaggle-2.2.4"
+          else
+            VENV="$XDG_CONFIG_HOME/addr-rooftam/kaggle-2.2.4"
+          fi
+          "$VENV/bin/python" -m pip check
+          "$VENV/bin/kaggle" --version
+          "$VENV/bin/kaggle" auth login --help
+          # Model the exact incomplete installation without touching any user environment.
+          "$VENV/bin/python" -m pip uninstall --yes six
+          if "$VENV/bin/kaggle" --version > "$RUNNER_TEMP/missing-six.log" 2>&1; then
+            echo 'Expected startup to fail with six removed' >&2
+            exit 1
+          fi
+          grep -F "No module named 'six'" "$RUNNER_TEMP/missing-six.log"
+          "$RUNNER_TEMP/rooftam" setup --python "$BASE_PYTHON"
+          "$VENV/bin/python" -m pip check
+          "$VENV/bin/python" -c 'import six; assert six.__version__ == "1.17.0"'
+          "$VENV/bin/kaggle" --version
+          "$VENV/bin/kaggle" auth login --help
+          "$VENV/bin/kaggle" kernels push --help
+          "$VENV/bin/kaggle" kernels output --help
