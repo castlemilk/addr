@@ -487,23 +487,37 @@ func (a *app) setup(ctx context.Context, python string) error {
 	if err = os.MkdirAll(home, 0700); err != nil {
 		return err
 	}
+	// Kaggle 2.2.4 imports six without declaring it. Do not rely on another
+	// dependency (formerly python-dateutil) installing it transitively.
+	// Keep the existing managed path so setup also repairs affected installs.
+	py, k := venvBin(home, "python"), venvBin(home, "kaggle")
 	for _, cmd := range []struct {
-		name string
-		args []string
-	}{{python, []string{"-m", "venv", home}}, {venvBin(home, "python"), []string{"-m", "pip", "install", "kaggle==" + kaggleVersion}}} {
+		stage string
+		name  string
+		args  []string
+	}{
+		{"create Python environment", python, []string{"-m", "venv", home}},
+		{"install Kaggle runtime", py, []string{"-m", "pip", "install", "kaggle==" + kaggleVersion, "six==1.17.0"}},
+		{"check declared dependencies", py, []string{"-m", "pip", "check"}},
+		{"start Kaggle client", k, []string{"--version"}},
+		{"check OAuth command startup", k, []string{"auth", "login", "--help"}},
+	} {
 		text, err := a.command(ctx, cmd.name, cmd.args, false)
 		if err != nil {
-			return fmt.Errorf("setup requires Python 3.11+, venv and Internet: %w\n%s", err, text)
+			return fmt.Errorf("setup failed during %s (Python 3.11+, venv and Internet required): %w\n%s\nFix the reported error and rerun task rooftam:setup; no sign-in was attempted", cmd.stage, err, text)
 		}
 	}
-	fmt.Fprintf(a.out, "Installed official Kaggle %s in %s\nNext: rooftam auth\n", kaggleVersion, home)
+	fmt.Fprintf(a.out, "Installed and startup-checked official Kaggle %s in %s\nNext: rooftam auth\n", kaggleVersion, home)
 	return nil
 }
 func (a *app) doctor(ctx context.Context, k string) error {
 	for _, args := range [][]string{{"--version"}, {"kernels", "push", "--help"}, {"kernels", "output", "--help"}, {"kernels", "list", "--mine", "--page-size", "1"}} {
 		text, err := a.command(ctx, k, args, false)
 		if err != nil {
-			return fmt.Errorf("Kaggle preflight failed; run rooftam auth or check network/account access: %w\n%s", err, text)
+			if args[0] == "--version" || args[len(args)-1] == "--help" {
+				return fmt.Errorf("Kaggle client startup failed; repair the client with task rooftam:setup before authenticating: %w\n%s", err, text)
+			}
+			return fmt.Errorf("Kaggle account preflight failed; run rooftam auth or check network/account access: %w\n%s", err, text)
 		}
 		if len(args) > 1 && args[1] == "push" && (!strings.Contains(text, "--accelerator") || !strings.Contains(text, "--timeout")) {
 			return errors.New("Kaggle client lacks required submission flags; run rooftam setup")
