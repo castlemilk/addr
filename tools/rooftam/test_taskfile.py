@@ -1,7 +1,7 @@
 """Task integration contracts. Uses real Task and fake Go/Kaggle-facing commands.
 
 No OAuth, network access, real Kaggle client, or compute submission is performed.
-Run from the repo: task rooftam:test:tasks. Requires Task v3 on PATH.
+Run from the repo: task --dir tools/rooftam test:tasks. Requires Task v3 on PATH.
 """
 from __future__ import annotations
 
@@ -44,7 +44,6 @@ class TaskfileTests(unittest.TestCase):
         self.module = self.root / "tools" / "rooftam"
         self.module.mkdir(parents=True)
         shutil.copy(ROOT / "Taskfile.yml", self.root / "Taskfile.yml")
-        shutil.copy(ROOT / "Taskfile.addr.yml", self.root / "Taskfile.addr.yml")
         shutil.copy(HERE / "Taskfile.yml", self.module / "Taskfile.yml")
         fake_bin = self.root / "fake-bin"
         fake_bin.mkdir()
@@ -60,15 +59,16 @@ class TaskfileTests(unittest.TestCase):
                 del self.env[key]
 
     def invoke(self, task, *args, local=False, dry=False, exit_code=False):
-        command = [self.task, "--dir", str(self.module if local else self.root)]
+        command = [self.task] if local else [self.task, "--dir", "tools/rooftam"]
         if dry:
             command += ["--dry"]
         if exit_code:
             command += ["--exit-code"]
-        command += [task if local else "rooftam:" + task]
+        command += [task]
         if args:
             command += ["--", *args]
-        return subprocess.run(command, text=True, capture_output=True, env=self.env, timeout=60)
+        return subprocess.run(command, cwd=self.module if local else self.root,
+                              text=True, capture_output=True, env=self.env, timeout=60)
 
     def calls(self):
         return [json.loads(line) for line in self.log.read_text().splitlines()] if self.log.exists() else []
@@ -76,46 +76,43 @@ class TaskfileTests(unittest.TestCase):
     def assert_ok(self, result):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
-    def test_existing_root_task_names_and_descriptions_unchanged(self):
-        def tasks(path):
-            result = subprocess.run([self.task, "--dir", str(self.root), "--taskfile", path,
-                                     "--list-all", "--json"], text=True, capture_output=True,
-                                    env=self.env, timeout=60)
-            self.assert_ok(result)
-            return {item["name"]: item.get("desc", "") for item in json.loads(result.stdout)["tasks"]}
-        original = tasks("Taskfile.addr.yml")
-        current = tasks("Taskfile.yml")
-        self.assertEqual(original, {name: desc for name, desc in current.items()
-                                    if not name.startswith("rooftam")})
+    def test_module_task_list_and_default_have_no_side_effects(self):
+        result = subprocess.run([self.task, "--dir", str(self.module), "--list-all", "--json"],
+                                text=True, capture_output=True, env=self.env, timeout=60)
+        self.assert_ok(result)
+        names = {item["name"] for item in json.loads(result.stdout)["tasks"]}
         for action in (*ACTIONS, "build", "check", "build:all", "clean"):
-            self.assertIn("rooftam:" + action, current)
+            self.assertIn(action, names)
+        self.assert_ok(self.invoke("default"))
         self.assertEqual(self.calls(), [])
 
-    def test_existing_root_build_commands_unchanged(self):
-        for task in ("build:server", "build:web", "test:go"):
+    def test_root_dir_and_module_build_commands_match(self):
+        for task in ("build", "test", "build:all"):
             with self.subTest(task=task):
-                outputs = []
-                for filename in ("Taskfile.addr.yml", "Taskfile.yml"):
-                    result = subprocess.run([self.task, "--dir", str(self.root), "--taskfile", filename,
-                                             "--dry", task], text=True, capture_output=True,
-                                            env=self.env, timeout=60)
-                    self.assert_ok(result)
-                    outputs.append(result.stdout + result.stderr)
-                self.assertEqual(outputs[0], outputs[1])
+                root = self.invoke(task, dry=True)
+                module = self.invoke(task, local=True, dry=True)
+                self.assert_ok(root)
+                self.assert_ok(module)
+                self.assertEqual(root.stdout + root.stderr, module.stdout + module.stderr)
         self.assertEqual(self.calls(), [])
 
-    def test_every_cli_action_routes_from_root_and_module(self):
-        for local in (False, True):
-            for action in ACTIONS:
-                with self.subTest(local=local, action=action):
-                    self.log.unlink(missing_ok=True)
-                    args = ["--run", "./runs/path with spaces", "--kaggle", "/tmp/client with spaces"]
-                    self.assert_ok(self.invoke(action, *args, local=local))
-                    calls = self.calls()
-                    self.assertEqual([c["command"] for c in calls], ["go", "rooftam"])
-                    self.assertEqual(calls[-1]["args"], [action, *args])
-                    self.assertEqual(calls[-1]["cwd"], str(self.module))
-                    self.assertEqual(calls[0]["gowork"], "off")
+    def check_actions(self, local):
+        for action in ACTIONS:
+            with self.subTest(local=local, action=action):
+                self.log.unlink(missing_ok=True)
+                args = ["--run", "./runs/path with spaces", "--kaggle", "/tmp/client with spaces"]
+                self.assert_ok(self.invoke(action, *args, local=local))
+                calls = self.calls()
+                self.assertEqual([c["command"] for c in calls], ["go", "rooftam"])
+                self.assertEqual(calls[-1]["args"], [action, *args])
+                self.assertEqual(calls[-1]["cwd"], str(self.module))
+                self.assertEqual(calls[0]["gowork"], "off")
+
+    def test_every_cli_action_routes_from_repo_root(self):
+        self.check_actions(local=False)
+
+    def test_every_cli_action_routes_from_module(self):
+        self.check_actions(local=True)
 
     def test_arguments_are_not_reinterpreted_as_shell_commands(self):
         payload = "user$(touch SHOULD_NOT_EXIST); echo nope"

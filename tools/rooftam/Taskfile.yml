@@ -1,7 +1,7 @@
 version: '3'
 
 # All relative CLI paths are relative to tools/rooftam, from either entrypoint:
-# task rooftam:run -- ...   OR   task --dir tools/rooftam run -- ...
+# task --dir tools/rooftam run -- ...   OR   cd tools/rooftam && task run -- ...
 vars:
   ROOFTAM_PYTHON: '{{.ROOFTAM_PYTHON | default "python3"}}'
 
@@ -49,7 +49,7 @@ tasks:
       - |
         files="$(gofmt -l *.go)"
         if [ -n "$files" ]; then
-          printf 'Run task rooftam:fmt; unformatted files:\n%s\n' "$files"
+          printf 'Run task fmt in tools/rooftam; unformatted files:\n%s\n' "$files"
           exit 1
         fi
       - GOWORK=off go vet ./...

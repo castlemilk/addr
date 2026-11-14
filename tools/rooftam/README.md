@@ -6,6 +6,27 @@ artifacts and verify the execution evidence. Go owns orchestration; the existing
 Python/PyTorch-XLA code remains the model runtime. This does not start addr's
 production web/geo services or promote trained weights.
 
+## Task workflow
+
+Builds, checks, onboarding and the complete experiment lifecycle are available
+through [Task](TASKS.md). From the addr repository root:
+
+```sh
+task --dir tools/rooftam build
+task --dir tools/rooftam check
+task --dir tools/rooftam onboard
+task --dir tools/rooftam --exit-code run -- \
+  --owner YOUR_KAGGLE_USERNAME --output ./runs/first-tpu
+```
+
+Or `cd tools/rooftam` and use `task build`, `task onboard`, `task run -- ...`,
+`task status -- --run ./runs/first-tpu`, and `task resume -- --run ./runs/first-tpu`.
+Relative run paths resolve in `tools/rooftam` in either case. Existing addr service
+tasks are untouched. Build/check never authenticate or allocate compute; `clean`
+removes only known controller build outputs, not saved runs or credentials.
+See [TASKS.md](TASKS.md) for all commands and recovery examples. Direct CLI use
+below remains supported; Task is not required for the Go binary itself.
+
 ## First run
 
 Requires Go 1.23+ to build, Python 3.11+ with `venv` for the official Kaggle client,

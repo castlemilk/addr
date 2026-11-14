@@ -2,15 +2,11 @@ name: RoofTAM Go CLI
 on:
   pull_request:
     paths:
-      - 'Taskfile.yml'
-      - 'Taskfile.addr.yml'
       - 'tools/rooftam/**'
       - '.github/workflows/rooftam-cli.yml'
   push:
     branches: [main]
     paths:
-      - 'Taskfile.yml'
-      - 'Taskfile.addr.yml'
       - 'tools/rooftam/**'
       - '.github/workflows/rooftam-cli.yml'
   workflow_dispatch:
@@ -23,6 +19,8 @@ jobs:
   test-build:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      GOTOOLCHAIN: local
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -35,21 +33,10 @@ jobs:
       - uses: go-task/setup-task@v1
         with:
           version: '3.52.0'
-      - name: Collect minimal Task regression reproduction inputs
-        run: |
-          mkdir -p "$RUNNER_TEMP/rooftam-task-repro/tools/rooftam"
-          cp "$(command -v task)" "$RUNNER_TEMP/rooftam-task-repro/task"
-          cp Taskfile.yml Taskfile.addr.yml "$RUNNER_TEMP/rooftam-task-repro/"
-          cp tools/rooftam/*.go tools/rooftam/*.py tools/rooftam/*.yml tools/rooftam/*.md tools/rooftam/go.mod "$RUNNER_TEMP/rooftam-task-repro/tools/rooftam/"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: rooftam-task-repro
-          path: ${{ runner.temp }}/rooftam-task-repro/
-          retention-days: 1
       - name: Lint, race tests and Task integration contracts (no Kaggle compute)
-        run: task rooftam:check
+        run: task --dir tools/rooftam check
       - name: Cross-build controllers through Task
-        run: task rooftam:build:all
+        run: task --dir tools/rooftam build:all
       - uses: actions/upload-artifact@v4
         with:
           name: rooftam-cli-binaries

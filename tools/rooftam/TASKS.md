@@ -10,14 +10,14 @@ not a second orchestration implementation.
 Run these from the **addr repository root**:
 
 ```sh
-task rooftam:build
-task rooftam:check                 # lint, race tests, Task integration tests
+task --dir tools/rooftam build
+task --dir tools/rooftam check                 # lint, race tests, Task integration tests
 
-task rooftam:onboard               # setup -> OAuth login -> doctor; no job launch
+task --dir tools/rooftam onboard               # setup -> OAuth login -> doctor; no job launch
 # Or perform the same steps individually:
-task rooftam:setup -- --python python3
-task rooftam:auth -- --no-launch-browser
-task rooftam:doctor
+task --dir tools/rooftam setup -- --python python3
+task --dir tools/rooftam auth -- --no-launch-browser
+task --dir tools/rooftam doctor
 ```
 
 `onboard` is sequential and stops on failure. Use the individual tasks when you
@@ -29,13 +29,13 @@ The setup/auth/doctor tasks are never dependencies of build, check or run.
 
 ```sh
 # Show the CLI's flags:
-task rooftam:help
+task --dir tools/rooftam help
 
 # Inspect the commands without building, authenticating or submitting:
-task --dry rooftam:run -- --owner YOUR_KAGGLE_USERNAME --output ./runs/first-tpu
+task --dir tools/rooftam --dry run -- --owner YOUR_KAGGLE_USERNAME --output ./runs/first-tpu
 
 # Submit, wait, retrieve and verify one private experiment:
-task --exit-code rooftam:run -- \
+task --dir tools/rooftam --exit-code run -- \
   --owner YOUR_KAGGLE_USERNAME --output ./runs/first-tpu
 ```
 
@@ -54,17 +54,17 @@ All existing CLI options remain available, including repeated `--dataset`,
 ## Detached submission and recovery
 
 ```sh
-task rooftam:prepare -- --owner YOUR_KAGGLE_USERNAME --output ./runs/review
+task --dir tools/rooftam prepare -- --owner YOUR_KAGGLE_USERNAME --output ./runs/review
 # Review tools/rooftam/runs/review/upload before deliberately submitting it:
-task rooftam:submit -- --run ./runs/review
+task --dir tools/rooftam submit -- --run ./runs/review
 
-task rooftam:status -- --run ./runs/review
-task rooftam:logs -- --run ./runs/review
-task rooftam:wait -- --run ./runs/review --timeout 3h
-task rooftam:download -- --run ./runs/review
-task --exit-code rooftam:verify -- --run ./runs/review
+task --dir tools/rooftam status -- --run ./runs/review
+task --dir tools/rooftam logs -- --run ./runs/review
+task --dir tools/rooftam wait -- --run ./runs/review --timeout 3h
+task --dir tools/rooftam download -- --run ./runs/review
+task --dir tools/rooftam --exit-code verify -- --run ./runs/review
 # Or reconnect, wait, download and verify in one step (never resubmits):
-task --exit-code rooftam:resume -- --run ./runs/review
+task --dir tools/rooftam --exit-code resume -- --run ./runs/review
 ```
 
 `run` and `submit` are the only tasks that submit a Kaggle job. `prepare` reads
@@ -81,7 +81,7 @@ translate the child exit code. Exit 3 is not an unconditional pass. See
 ## Real roof training
 
 ```sh
-task --exit-code rooftam:run -- \
+task --dir tools/rooftam --exit-code run -- \
   --owner YOUR_KAGGLE_USERNAME --output ./runs/real-pilot \
   --dataset YOUR_KAGGLE_USERNAME/reviewed-roofs \
   --manifest /kaggle/input/reviewed-roofs/manifest.jsonl \
@@ -95,13 +95,13 @@ attach its dataset and pass `--sam3-predictions` as described in [the CLI guide]
 ## Development and cleanup
 
 ```sh
-task rooftam:fmt                    # modifies Go formatting only
-task rooftam:lint
-task rooftam:test -- -run TestName  # optional Go test filter
-task rooftam:test:tasks            # fake lifecycle commands; no Kaggle requests
-task rooftam:build:all             # four Linux/macOS binaries + SHA256SUMS in dist/
-task rooftam:install               # optional Go install to GOBIN/GOPATH/bin
-task rooftam:clean                 # ONLY known controller binaries + coverage
+task --dir tools/rooftam fmt                    # modifies Go formatting only
+task --dir tools/rooftam lint
+task --dir tools/rooftam test -- -run TestName  # optional Go test filter
+task --dir tools/rooftam test:tasks            # fake lifecycle commands; no Kaggle requests
+task --dir tools/rooftam build:all             # four Linux/macOS binaries + SHA256SUMS in dist/
+task --dir tools/rooftam install               # optional Go install to GOBIN/GOPATH/bin
+task --dir tools/rooftam clean                 # ONLY known controller binaries + coverage
 ```
 
 `clean` never removes saved runs, receipts, downloads, logs, credentials or the
@@ -111,11 +111,9 @@ Set `ROOFTAM_PYTHON=/path/to/python3` to choose Python for lint, Task tests and
 release checksums. For Kaggle-client setup, use `--python` instead.
 
 The same tasks work standalone: `task --dir tools/rooftam build` or, from that
-directory, `task run -- --owner ...`. The root `Taskfile.yml` includes the module
-under `rooftam:`. Existing addr tasks are retained verbatim in `Taskfile.addr.yml`
-and flattened into their original root names; edit those service tasks there.
-Regression tests compare the old task list/descriptions and dry-run build commands
-against the composed root. CI runs `task rooftam:check` and
-`task rooftam:build:all`, never onboarding or submission.
+directory, `task run -- --owner ...`. The existing root `Taskfile.yml` is unchanged: service lifecycle commands
+remain separate from experiments. Integration tests exercise both entrypoints,
+quoted arguments, dry runs, failure propagation and conservative cleanup. CI runs `task --dir tools/rooftam check` and
+`task --dir tools/rooftam build:all`, never onboarding or submission.
 
 Passing these checks is controller/Task evidence, not a live Kaggle or TPU run.
