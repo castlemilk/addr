@@ -1,18 +1,21 @@
 version: '3'
 
-# All relative CLI paths are relative to tools/rooftam, from either entrypoint:
-# task --dir tools/rooftam run -- ...   OR   cd tools/rooftam && task run -- ...
+# Root-level RoofTAM tasks, included by Taskfile.yml as rooftam:<task>.
+# Explicit directories also support task -t Taskfile.rooftam.yml <task>.
+# Preserve existing relative run paths under tools/rooftam.
 vars:
   ROOFTAM_PYTHON: '{{.ROOFTAM_PYTHON | default "python3"}}'
 
 tasks:
   default:
+    dir: '{{.ROOT_DIR}}/tools/rooftam'
     desc: List RoofTAM tasks (no build, authentication or submission)
     silent: true
     cmds:
-      - task --list
+      - task --taskfile {{printf "%s/Taskfile.rooftam.yml" .ROOT_DIR | shellQuote}} --list
 
   build:
+    dir: '{{.ROOT_DIR}}/tools/rooftam'
     desc: Build the local Go controller (includes the embedded Python runner)
     run: once
     cmds:
@@ -21,11 +24,13 @@ tasks:
       - GOWORK=off go build -trimpath -o './rooftam{{exeExt}}' .
 
   install:
+    dir: '{{.ROOT_DIR}}/tools/rooftam'
     desc: Install the controller into GOBIN or GOPATH/bin
     cmds:
       - GOWORK=off go install -trimpath .
 
   build:all:
+    dir: '{{.ROOT_DIR}}/tools/rooftam'
     desc: Cross-build Linux/macOS amd64/arm64 controllers and SHA256SUMS
     cmds:
       - mkdir -p dist
@@ -39,17 +44,19 @@ tasks:
         {{.ROOFTAM_PYTHON | shellQuote}} -c 'import hashlib,pathlib; p=pathlib.Path("dist"); names=["rooftam-"+os+"-"+arch for os in ("linux","darwin") for arch in ("amd64","arm64")]; (p/"SHA256SUMS").write_text("".join(hashlib.sha256((p/n).read_bytes()).hexdigest()+"  "+n+"\n" for n in sorted(names)))'
 
   fmt:
+    dir: '{{.ROOT_DIR}}/tools/rooftam'
     desc: Format the Go controller sources
     cmds:
       - gofmt -w *.go
 
   lint:
+    dir: '{{.ROOT_DIR}}/tools/rooftam'
     desc: Check Go formatting, vet and Python syntax without installing ML dependencies
     cmds:
       - |
         files="$(gofmt -l *.go)"
         if [ -n "$files" ]; then
-          printf 'Run task fmt in tools/rooftam; unformatted files:\n%s\n' "$files"
+          printf 'Run task rooftam:fmt; unformatted files:\n%s\n' "$files"
           exit 1
         fi
       - GOWORK=off go vet ./...
@@ -57,16 +64,19 @@ tasks:
         {{.ROOFTAM_PYTHON | shellQuote}} -c 'from pathlib import Path; [compile(p.read_text(), str(p), "exec") for p in (Path("runner.py"), Path("test_taskfile.py"))]'
 
   test:
+    dir: '{{.ROOT_DIR}}/tools/rooftam'
     desc: Run controller race tests and write coverage.out (no Kaggle calls)
     cmds:
       - GOWORK=off go test -race -coverprofile=coverage.out {{.CLI_ARGS}} ./...
 
   test:tasks:
+    dir: '{{.ROOT_DIR}}/tools/rooftam'
     desc: Exercise Task routing, argument quoting and cleanup with fake commands
     cmds:
       - '{{.ROOFTAM_PYTHON | shellQuote}} test_taskfile.py'
 
   check:
+    dir: '{{.ROOT_DIR}}/tools/rooftam'
     desc: Run lint, Go tests and Task integration tests; never submit compute
     cmds:
       - task: lint
@@ -74,6 +84,7 @@ tasks:
       - task: test:tasks
 
   help:
+    dir: '{{.ROOT_DIR}}/tools/rooftam'
     desc: Show CLI flags and exit-code meanings
     deps: [build]
     silent: true
@@ -81,6 +92,7 @@ tasks:
       - './rooftam{{exeExt}} --help'
 
   setup:
+    dir: '{{.ROOT_DIR}}/tools/rooftam'
     desc: Install the pinned official Kaggle client in its isolated user environment
     deps: [build]
     silent: true
@@ -88,6 +100,7 @@ tasks:
       - './rooftam{{exeExt}} setup {{.CLI_ARGS}}'
 
   auth:
+    dir: '{{.ROOT_DIR}}/tools/rooftam'
     desc: Sign in through the official Kaggle OAuth flow
     deps: [build]
     interactive: true
@@ -96,6 +109,7 @@ tasks:
       - './rooftam{{exeExt}} auth {{.CLI_ARGS}}'
 
   doctor:
+    dir: '{{.ROOT_DIR}}/tools/rooftam'
     desc: Check client capabilities and account access (read-only)
     deps: [build]
     silent: true
@@ -103,6 +117,7 @@ tasks:
       - './rooftam{{exeExt}} doctor {{.CLI_ARGS}}'
 
   onboard:
+    dir: '{{.ROOT_DIR}}/tools/rooftam'
     desc: Build, install the Kaggle client, sign in and check access; does not submit
     interactive: true
     cmds:
@@ -111,6 +126,7 @@ tasks:
       - task: doctor
 
   prepare:
+    dir: '{{.ROOT_DIR}}/tools/rooftam'
     desc: Prepare a pinned private notebook without submitting (--owner USER --output DIR)
     deps: [build]
     silent: true
@@ -118,6 +134,7 @@ tasks:
       - './rooftam{{exeExt}} prepare {{.CLI_ARGS}}'
 
   run:
+    dir: '{{.ROOT_DIR}}/tools/rooftam'
     desc: Submit ONE private TPU experiment, wait, download and verify (--owner USER --output DIR)
     deps: [build]
     silent: true
@@ -125,6 +142,7 @@ tasks:
       - './rooftam{{exeExt}} run {{.CLI_ARGS}}'
 
   submit:
+    dir: '{{.ROOT_DIR}}/tools/rooftam'
     desc: Submit an already prepared run once, then detach (--run DIR)
     deps: [build]
     silent: true
@@ -132,6 +150,7 @@ tasks:
       - './rooftam{{exeExt}} submit {{.CLI_ARGS}}'
 
   status:
+    dir: '{{.ROOT_DIR}}/tools/rooftam'
     desc: Read the status of an existing run (--run DIR)
     deps: [build]
     silent: true
@@ -139,6 +158,7 @@ tasks:
       - './rooftam{{exeExt}} status {{.CLI_ARGS}}'
 
   logs:
+    dir: '{{.ROOT_DIR}}/tools/rooftam'
     desc: Retrieve execution logs for an existing run (--run DIR)
     deps: [build]
     silent: true
@@ -146,6 +166,7 @@ tasks:
       - './rooftam{{exeExt}} logs {{.CLI_ARGS}}'
 
   wait:
+    dir: '{{.ROOT_DIR}}/tools/rooftam'
     desc: Wait for an existing run without resubmitting (--run DIR)
     deps: [build]
     silent: true
@@ -153,6 +174,7 @@ tasks:
       - './rooftam{{exeExt}} wait {{.CLI_ARGS}}'
 
   download:
+    dir: '{{.ROOT_DIR}}/tools/rooftam'
     desc: Download artifacts for an existing run (--run DIR)
     deps: [build]
     silent: true
@@ -160,6 +182,7 @@ tasks:
       - './rooftam{{exeExt}} download {{.CLI_ARGS}}'
 
   resume:
+    dir: '{{.ROOT_DIR}}/tools/rooftam'
     desc: Reconnect, wait, download and verify the SAME run; never resubmit (--run DIR)
     deps: [build]
     silent: true
@@ -167,6 +190,7 @@ tasks:
       - './rooftam{{exeExt}} resume {{.CLI_ARGS}}'
 
   verify:
+    dir: '{{.ROOT_DIR}}/tools/rooftam'
     desc: Verify downloaded execution evidence offline (--run DIR)
     deps: [build]
     silent: true
@@ -174,6 +198,7 @@ tasks:
       - './rooftam{{exeExt}} verify {{.CLI_ARGS}}'
 
   clean:
+    dir: '{{.ROOT_DIR}}/tools/rooftam'
     desc: Remove controller binaries and coverage ONLY; preserve runs, logs, auth and environments
     cmds:
       - rm -f ./rooftam ./rooftam.exe ./coverage.out

@@ -2,11 +2,15 @@ name: RoofTAM Go CLI
 on:
   pull_request:
     paths:
+      - 'Taskfile.yml'
+      - 'Taskfile.rooftam.yml'
       - 'tools/rooftam/**'
       - '.github/workflows/rooftam-cli.yml'
   push:
     branches: [main]
     paths:
+      - 'Taskfile.yml'
+      - 'Taskfile.rooftam.yml'
       - 'tools/rooftam/**'
       - '.github/workflows/rooftam-cli.yml'
   workflow_dispatch:
@@ -33,10 +37,10 @@ jobs:
       - uses: go-task/setup-task@v1
         with:
           version: '3.52.0'
-      - name: Lint, race tests and Task integration contracts (no Kaggle compute)
-        run: task --dir tools/rooftam check
-      - name: Cross-build controllers through Task
-        run: task --dir tools/rooftam build:all
+      - name: Lint, race tests and root Task integration contracts (no Kaggle compute)
+        run: task rooftam:check
+      - name: Cross-build controllers through root Taskfile
+        run: task rooftam:build:all
       - uses: actions/upload-artifact@v4
         with:
           name: rooftam-cli-binaries

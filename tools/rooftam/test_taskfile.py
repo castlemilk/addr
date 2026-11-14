@@ -1,7 +1,7 @@
 """Task integration contracts. Uses real Task and fake Go/Kaggle-facing commands.
 
 No OAuth, network access, real Kaggle client, or compute submission is performed.
-Run from the repo: task --dir tools/rooftam test:tasks. Requires Task v3 on PATH.
+Run from the repo: task rooftam:test:tasks. Requires Task v3 on PATH.
 """
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ import unittest
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
+ROOT_INCLUDE = "includes:\n  rooftam: ./Taskfile.rooftam.yml\n\n"
 ACTIONS = (
     "setup", "auth", "doctor", "prepare", "run", "submit", "status",
     "logs", "wait", "download", "resume", "verify",
@@ -25,7 +26,8 @@ import json, os, pathlib, sys
 name = pathlib.Path(sys.argv[0]).name
 with open(os.environ["ROOFTAM_TEST_LOG"], "a") as stream:
     stream.write(json.dumps(dict(command=name, args=sys.argv[1:], cwd=os.getcwd(),
-                                gowork=os.environ.get("GOWORK")))+"\\n")
+                                gowork=os.environ.get("GOWORK"),
+                                dotenv=os.environ.get("ROOFTAM_TEST_ENV")))+"\\n")
 sys.exit(int(os.environ.get("ROOFTAM_TEST_GO_EXIT" if name == "go" else "ROOFTAM_TEST_EXIT", "0")))
 '''
 
@@ -44,7 +46,9 @@ class TaskfileTests(unittest.TestCase):
         self.module = self.root / "tools" / "rooftam"
         self.module.mkdir(parents=True)
         shutil.copy(ROOT / "Taskfile.yml", self.root / "Taskfile.yml")
-        shutil.copy(HERE / "Taskfile.yml", self.module / "Taskfile.yml")
+        shutil.copy(ROOT / "Taskfile.rooftam.yml", self.root / "Taskfile.rooftam.yml")
+        original = (ROOT / "Taskfile.yml").read_text().replace(ROOT_INCLUDE, "", 1)
+        (self.root / "Taskfile.original.yml").write_text(original)
         fake_bin = self.root / "fake-bin"
         fake_bin.mkdir()
         for target in (fake_bin / "go", self.module / "rooftam"):
@@ -58,16 +62,18 @@ class TaskfileTests(unittest.TestCase):
             if key.startswith("TASK_"):
                 del self.env[key]
 
-    def invoke(self, task, *args, local=False, dry=False, exit_code=False):
-        command = [self.task] if local else [self.task, "--dir", "tools/rooftam"]
+    def invoke(self, task, *args, entry="root", dry=False, exit_code=False):
+        command = [self.task]
+        if entry == "file":
+            command += ["--taskfile", "Taskfile.rooftam.yml"]
         if dry:
             command += ["--dry"]
         if exit_code:
             command += ["--exit-code"]
-        command += [task]
+        command += [task if entry == "file" else "rooftam:" + task]
         if args:
             command += ["--", *args]
-        return subprocess.run(command, cwd=self.module if local else self.root,
+        return subprocess.run(command, cwd=self.module if entry == "nested" else self.root,
                               text=True, capture_output=True, env=self.env, timeout=60)
 
     def calls(self):
@@ -76,43 +82,79 @@ class TaskfileTests(unittest.TestCase):
     def assert_ok(self, result):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
-    def test_module_task_list_and_default_have_no_side_effects(self):
-        result = subprocess.run([self.task, "--dir", str(self.module), "--list-all", "--json"],
-                                text=True, capture_output=True, env=self.env, timeout=60)
-        self.assert_ok(result)
-        names = {item["name"] for item in json.loads(result.stdout)["tasks"]}
+    def test_existing_root_task_names_and_descriptions_unchanged(self):
+        def tasks(path):
+            result = subprocess.run([self.task, "--dir", str(self.root), "--taskfile", str(self.root / path),
+                                     "--list-all", "--json"], text=True, capture_output=True,
+                                    env=self.env, timeout=60)
+            self.assert_ok(result)
+            return {item["name"]: item.get("desc", "") for item in json.loads(result.stdout)["tasks"]}
+        original = tasks("Taskfile.original.yml")
+        current = tasks("Taskfile.yml")
+        self.assertEqual(original, {name: desc for name, desc in current.items()
+                                    if not name.startswith("rooftam")})
         for action in (*ACTIONS, "build", "check", "build:all", "clean"):
-            self.assertIn(action, names)
-        self.assert_ok(self.invoke("default"))
+            self.assertIn("rooftam:" + action, current)
         self.assertEqual(self.calls(), [])
 
-    def test_root_dir_and_module_build_commands_match(self):
-        for task in ("build", "test", "build:all"):
+    def test_existing_root_build_commands_unchanged(self):
+        for task in ("build:server", "build:web", "test:go"):
             with self.subTest(task=task):
-                root = self.invoke(task, dry=True)
-                module = self.invoke(task, local=True, dry=True)
-                self.assert_ok(root)
-                self.assert_ok(module)
-                self.assertEqual(root.stdout + root.stderr, module.stdout + module.stderr)
+                outputs = []
+                for filename in ("Taskfile.original.yml", "Taskfile.yml"):
+                    result = subprocess.run([self.task, "--dir", str(self.root), "--taskfile", str(self.root / filename),
+                                             "--dry", task], text=True, capture_output=True,
+                                            env=self.env, timeout=60)
+                    self.assert_ok(result)
+                    outputs.append(result.stdout + result.stderr)
+                self.assertEqual(outputs[0], outputs[1])
         self.assertEqual(self.calls(), [])
 
-    def check_actions(self, local):
-        for action in ACTIONS:
-            with self.subTest(local=local, action=action):
-                self.log.unlink(missing_ok=True)
-                args = ["--run", "./runs/path with spaces", "--kaggle", "/tmp/client with spaces"]
-                self.assert_ok(self.invoke(action, *args, local=local))
-                calls = self.calls()
-                self.assertEqual([c["command"] for c in calls], ["go", "rooftam"])
-                self.assertEqual(calls[-1]["args"], [action, *args])
-                self.assertEqual(calls[-1]["cwd"], str(self.module))
-                self.assertEqual(calls[0]["gowork"], "off")
+    def test_only_root_level_taskfiles(self):
+        self.assertTrue((ROOT / "Taskfile.rooftam.yml").is_file())
+        self.assertFalse((HERE / "Taskfile.yml").exists())
+        self.assertEqual((ROOT / "Taskfile.yml").read_text().count(ROOT_INCLUDE), 1)
+        self.assertNotIn("dotenv:", (ROOT / "Taskfile.rooftam.yml").read_text())
 
-    def test_every_cli_action_routes_from_repo_root(self):
-        self.check_actions(local=False)
+    def test_root_and_standalone_defaults_have_no_side_effects(self):
+        for entry in ("root", "file", "nested"):
+            with self.subTest(entry=entry):
+                result = self.invoke("default", entry=entry)
+                self.assert_ok(result)
+                self.assertIn("onboard", result.stdout)
+        self.assertEqual(self.calls(), [])
 
-    def test_every_cli_action_routes_from_module(self):
-        self.check_actions(local=True)
+    def test_build_dry_runs_match_across_entrypoints(self):
+        for name in ("build", "test", "build:all"):
+            with self.subTest(task=name):
+                outputs = []
+                for entry in ("root", "file", "nested"):
+                    result = self.invoke(name, entry=entry, dry=True)
+                    self.assert_ok(result)
+                    outputs.append((result.stdout + result.stderr).replace("[rooftam:", "["))
+                self.assertEqual(outputs[0], outputs[1])
+                self.assertEqual(outputs[0], outputs[2])
+        self.assertEqual(self.calls(), [])
+
+    def test_root_dotenv_loads_for_included_tasks(self):
+        (self.root / ".env.local").write_text("ROOFTAM_TEST_ENV=local-value\n")
+        for entry in ("root", "nested"):
+            self.log.unlink(missing_ok=True)
+            self.assert_ok(self.invoke("doctor", entry=entry))
+            self.assertEqual(self.calls()[-1]["dotenv"], "local-value")
+
+    def test_every_cli_action_routes_from_all_root_entrypoints(self):
+        for entry in ("root", "file", "nested"):
+            for action in ACTIONS:
+                with self.subTest(entry=entry, action=action):
+                    self.log.unlink(missing_ok=True)
+                    args = ["--run", "./runs/path with spaces", "--kaggle", "/tmp/client with spaces"]
+                    self.assert_ok(self.invoke(action, *args, entry=entry))
+                    calls = self.calls()
+                    self.assertEqual([c["command"] for c in calls], ["go", "rooftam"])
+                    self.assertEqual(calls[-1]["args"], [action, *args])
+                    self.assertEqual(calls[-1]["cwd"], str(self.module))
+                    self.assertEqual(calls[0]["gowork"], "off")
 
     def test_arguments_are_not_reinterpreted_as_shell_commands(self):
         payload = "user$(touch SHOULD_NOT_EXIST); echo nope"
