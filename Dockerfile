@@ -2,7 +2,7 @@
 # ------------------------------------------------------------------------------
 # Build Stage: Pure Go static compilation
 # ------------------------------------------------------------------------------
-FROM golang:1.24-alpine AS builder
+FROM golang:1.27.4-alpine AS builder
 
 WORKDIR /src
 
